@@ -1,0 +1,1443 @@
+---
+title: "testresults20250121"
+author: "Zoe Mozola"
+date: "2025-01-21"
+output: html_document
+---
+
+``` {r Setup}
+
+library(tidyverse)
+library(here)
+library(janitor)
+library(ggplot2)
+library(ggsignif)
+library(ggpubr)
+
+filepath <- "C:/Users/zoemo/OneDrive/Desktop/Hendry Lab"
+
+
+```
+
+```{r Read-In}
+data1 <- read_csv("C:/Users/zoemo/OneDrive/Desktop/Hendry Lab/ZM Data Sheet - Copy.csv")
+data2 <- read_csv("C:/Users/zoemo/OneDrive/Desktop/Hendry Lab/ZM Data Sheet 250127.csv")
+data3 <- read_csv("C:/Users/zoemo/OneDrive/Desktop/Hendry Lab/ZM Data Sheet With Other.csv")
+data4 <- read_csv("C:/Users/zoemo/OneDrive/Desktop/Hendry Lab/ZM Data Sheet Cleaned.csv")
+data5 <- read_csv("C:/Users/zoemo/OneDrive/Desktop/Hendry Lab/ZM Data Sheet Cleaned Reduced.csv")
+
+
+```
+
+```{r Cleaning}
+# Set Current dataset 
+data <- data5
+
+
+#Encleanenate
+dataclean <- data %>%
+  clean_names() %>%
+  filter(!is.na(fish_id)) %>%
+  #Make that shit categorical
+  mutate(time_period = ifelse(year >= 2000, "Present", "Historical")) %>%
+  #Make tag for unarmoured/giant
+  mutate(type = ifelse(body_of_water %in% c("Drizzle Lake", "Mayer Lake"), "Giant", "Unarmoured")) %>%
+  #Make Plate Arrangement a string
+  mutate(plate_l_combined = as.factor(plate_l_combined)) %>%
+  mutate(plate_r_combined = as.factor(plate_r_combined)) %>%
+  mutate(body_of_water = factor(body_of_water, levels = c("Mayer Lake", "Drizzle Lake",
+                                            "Serendipity Lake", "Boulton Lake", 
+                                            "Rouge Lake")))
+
+#ALLOMETRIC ADJUSTMENTS
+data.log <- dataclean %>%
+  mutate_at(vars(sl, body_depth, ap_length_corrected, ap_width_corrected, jaw_length, ppl, ppw, dorsal_1, dorsal_2, pelvic_spine, eye_diameter),
+                  log10)
+
+# size.coef is a function to get coefficient for #size adjustment #trait - name of trait col to get #slope coefficient
+size.coef<-function(trait){
+  ancova=lm(data=data.log, trait~sl+body_of_water)
+  coef=ancova$coefficients[2]
+  coef
+}
+
+#the following line produces slope coefficient. #Repeat for each trait.
+BD.coef<-size.coef(data.log$body_depth)
+APL.coef<-size.coef(data.log$ap_length_corrected)
+APW.coef<-size.coef(data.log$ap_width_corrected)
+JL.coef<-size.coef(data.log$jaw_length)
+PPL.coef<-size.coef(data.log$ppl)
+PPW.coef<-size.coef(data.log$ppw)
+D1.coef<-size.coef(data.log$dorsal_1) #log of 0 is infinity
+D2.coef<-size.coef(data.log$dorsal_2)
+PS.coef<-size.coef(data.log$pelvic_spine)
+ED.coef<-size.coef(data.log$eye_diameter)
+
+# following makes a matrix 1 x k matrix of slopes for each trait
+Coef<-matrix(c(BD.coef, APL.coef, APW.coef,JL.coef, PPL.coef, PPW.coef, D1.coef, D2.coef, PS.coef, ED.coef),dimnames = list(c("body_depth", "ap_length", "ap_width", "jaw_length", "ppl", "ppw", "dorsal_1", "dorsal_2", "pelvic", "eye")))
+
+
+# Adjusts trait value using formula: Xadj=Xi*(mean(sl)/SLi)^b
+dataclean$body_depth.adj<-dataclean$body_depth*(mean(dataclean$sl)/dataclean$sl)^Coef["body_depth",]
+dataclean$ap_length.adj<-dataclean$ap_length_corrected*(mean(dataclean$sl)/dataclean$sl)^Coef["ap_length",]
+dataclean$ap_width.adj<-dataclean$ap_width_corrected*(mean(dataclean$sl)/dataclean$sl)^Coef["ap_width",]
+dataclean$jaw_length.adj<-dataclean$jaw_length*(mean(dataclean$sl)/dataclean$sl)^Coef["jaw_length",]
+dataclean$ppl.adj<-dataclean$ppl*(mean(dataclean$sl)/dataclean$sl)^Coef["ppl",]
+dataclean$ppw.adj<-dataclean$ppw*(mean(dataclean$sl)/dataclean$sl)^Coef["ppw",]
+dataclean$dorsal_1.adj<-dataclean$dorsal_1*(mean(dataclean$sl)/dataclean$sl)^Coef["dorsal_1",]
+dataclean$dorsal_2.adj<-dataclean$dorsal_2*(mean(dataclean$sl)/dataclean$sl)^Coef["dorsal_2",]
+dataclean$pelvic_spine.adj<-dataclean$pelvic_spine*(mean(dataclean$sl)/dataclean$sl)^Coef["pelvic",]
+dataclean$eye_diameter.adj<-dataclean$eye_diameter*(mean(dataclean$sl)/dataclean$sl)^Coef["eye",]
+
+
+
+
+
+#Make Boulton
+boulton <- dataclean %>%
+  filter(body_of_water=="Boulton Lake")
+  
+
+#Make Drizzle
+drizzle <- dataclean %>%
+  filter(body_of_water=="Drizzle Lake")
+
+#Make Mayer
+mayer <- dataclean %>%
+  filter(body_of_water=="Mayer Lake")
+
+#Make Serendipity
+serendipity <- dataclean %>%
+  filter(body_of_water=="Serendipity Lake")
+
+#Make Rouge
+rouge <- dataclean %>%
+  filter(body_of_water=="Rouge Lake")
+
+
+
+```
+
+
+```{r Check for outliers unadjusted}
+
+#All Lakes
+ggplot(dataclean, aes(x = sl, y = body_depth)) + geom_point() + geom_text(aes(label = fish_id))
+ggplot(dataclean, aes(x = sl, y = ap_length_corrected)) + geom_point() + geom_text(aes(label = fish_id))
+ggplot(dataclean, aes(x = sl, y = ap_width_corrected)) + geom_point() + geom_text(aes(label = fish_id))
+ggplot(dataclean, aes(x = sl, y = jaw_length)) + geom_point() + geom_text(aes(label = fish_id))
+ggplot(dataclean, aes(x = sl, y = ppl)) + geom_point() + geom_text(aes(label = fish_id))
+ggplot(dataclean, aes(x = sl, y = ppw)) + geom_point() + geom_text(aes(label = fish_id))
+ggplot(dataclean, aes(x = sl, y = dorsal_1)) + geom_point() + geom_text(aes(label = fish_id))
+ggplot(dataclean, aes(x = sl, y = dorsal_2)) + geom_point() + geom_text(aes(label = fish_id))
+ggplot(dataclean, aes(x = sl, y = pelvic_spine)) + geom_point() + geom_text(aes(label = fish_id))
+ggplot(dataclean, aes(x = sl, y = eye_diameter)) + geom_point() + geom_text(aes(label = fish_id))
+
+
+#Boulton
+ggplot(boulton, aes(x = sl, y = body_depth)) + geom_point(color = "purple") + geom_text(aes(label = fish_id), color = "purple")
+ggplot(boulton, aes(x = sl, y = ap_length_corrected)) + geom_point(color = "purple") + geom_text(aes(label = fish_id), color = "purple")
+ggplot(boulton, aes(x = sl, y = ap_width_corrected)) + geom_point(color = "purple") + geom_text(aes(label = fish_id), color = "purple")
+ggplot(boulton, aes(x = sl, y = jaw_length)) + geom_point(color = "purple") + geom_text(aes(label = fish_id), color = "purple")
+ggplot(boulton, aes(x = sl, y = ppl)) + geom_point(color = "purple") + geom_text(aes(label = fish_id), color = "purple")
+ggplot(boulton, aes(x = sl, y = ppw)) + geom_point(color = "purple") + geom_text(aes(label = fish_id), color = "purple")
+ggplot(boulton, aes(x = sl, y = dorsal_1)) + geom_point(color = "purple") + geom_text(aes(label = fish_id), color = "purple")
+ggplot(boulton, aes(x = sl, y = dorsal_2)) + geom_point(color = "purple") + geom_text(aes(label = fish_id), color = "purple")
+ggplot(boulton, aes(x = sl, y = pelvic_spine)) + geom_point(color = "purple") + geom_text(aes(label = fish_id), color = "purple")
+ggplot(boulton, aes(x = sl, y = eye_diameter)) + geom_point(color = "purple") + geom_text(aes(label = fish_id), color = "purple")
+
+#Mayer
+ggplot(mayer, aes(x = sl, y = body_depth)) + geom_point(color = "darkorange2") + geom_text(aes(label = fish_id), color = "darkorange2")
+ggplot(mayer, aes(x = sl, y = ap_length_corrected)) + geom_point(color = "darkorange2") + geom_text(aes(label = fish_id), color = "darkorange2")
+ggplot(mayer, aes(x = sl, y = ap_width_corrected)) + geom_point(color = "darkorange2") + geom_text(aes(label = fish_id), color = "darkorange2")
+ggplot(mayer, aes(x = sl, y = jaw_length)) + geom_point(color = "darkorange2") + geom_text(aes(label = fish_id), color = "darkorange2")
+ggplot(mayer, aes(x = sl, y = ppl)) + geom_point(color = "darkorange2") + geom_text(aes(label = fish_id), color = "darkorange2")
+ggplot(mayer, aes(x = sl, y = ppw)) + geom_point(color = "darkorange2") + geom_text(aes(label = fish_id), color = "darkorange2")
+ggplot(mayer, aes(x = sl, y = dorsal_1)) + geom_point(color = "darkorange2") + geom_text(aes(label = fish_id), color = "darkorange2")
+ggplot(mayer, aes(x = sl, y = dorsal_2)) + geom_point(color = "darkorange2") + geom_text(aes(label = fish_id), color = "darkorange2")
+ggplot(mayer, aes(x = sl, y = pelvic_spine)) + geom_point(color = "darkorange2") + geom_text(aes(label = fish_id), color = "darkorange2")
+ggplot(mayer, aes(x = sl, y = eye_diameter)) + geom_point(color = "darkorange2") + geom_text(aes(label = fish_id), color = "darkorange2")
+
+#Drizzle
+ggplot(drizzle, aes(x = sl, y = body_depth)) + geom_point(color = "chartreuse4") + geom_text(aes(label = fish_id), color = "chartreuse4")
+ggplot(drizzle, aes(x = sl, y = ap_length_corrected)) + geom_point(color = "chartreuse4") + geom_text(aes(label = fish_id), color = "chartreuse4")
+ggplot(drizzle, aes(x = sl, y = ap_width_corrected)) + geom_point(color = "chartreuse4") + geom_text(aes(label = fish_id), color = "chartreuse4")
+ggplot(drizzle, aes(x = sl, y = jaw_length)) + geom_point(color = "chartreuse4") + geom_text(aes(label = fish_id), color = "chartreuse4")
+ggplot(drizzle, aes(x = sl, y = ppl)) + geom_point(color = "chartreuse4") + geom_text(aes(label = fish_id), color = "chartreuse4")
+ggplot(drizzle, aes(x = sl, y = ppw)) + geom_point(color = "chartreuse4") + geom_text(aes(label = fish_id), color = "chartreuse4")
+ggplot(drizzle, aes(x = sl, y = dorsal_1)) + geom_point(color = "chartreuse4") + geom_text(aes(label = fish_id), color = "chartreuse4")
+ggplot(drizzle, aes(x = sl, y = dorsal_2)) + geom_point(color = "chartreuse4") + geom_text(aes(label = fish_id), color = "chartreuse4")
+ggplot(drizzle, aes(x = sl, y = pelvic_spine)) + geom_point(color = "chartreuse4") + geom_text(aes(label = fish_id), color = "chartreuse4")
+ggplot(drizzle, aes(x = sl, y = eye_diameter)) + geom_point(color = "chartreuse4") + geom_text(aes(label = fish_id), color = "chartreuse4")
+
+#Serendipity
+ggplot(serendipity, aes(x = sl, y = body_depth)) + geom_point(color = "blue") + geom_text(aes(label = fish_id), color = "blue")
+ggplot(serendipity, aes(x = sl, y = ap_length_corrected)) + geom_point(color = "blue") + geom_text(aes(label = fish_id), color = "blue")
+ggplot(serendipity, aes(x = sl, y = ap_width_corrected)) + geom_point(color = "blue") + geom_text(aes(label = fish_id), color = "blue")
+ggplot(serendipity, aes(x = sl, y = jaw_length)) + geom_point(color = "blue") + geom_text(aes(label = fish_id), color = "blue")
+ggplot(serendipity, aes(x = sl, y = ppl)) + geom_point(color = "blue") + geom_text(aes(label = fish_id), color = "blue")
+ggplot(serendipity, aes(x = sl, y = ppw)) + geom_point(color = "blue") + geom_text(aes(label = fish_id), color = "blue")
+ggplot(serendipity, aes(x = sl, y = dorsal_1)) + geom_point(color = "blue") + geom_text(aes(label = fish_id), color = "blue")
+ggplot(serendipity, aes(x = sl, y = dorsal_2)) + geom_point(color = "blue") + geom_text(aes(label = fish_id), color = "blue")
+ggplot(serendipity, aes(x = sl, y = pelvic_spine)) + geom_point(color = "blue") + geom_text(aes(label = fish_id), color = "blue")
+ggplot(serendipity, aes(x = sl, y = eye_diameter)) + geom_point(color = "blue") + geom_text(aes(label = fish_id), color = "blue")
+
+#Rouge
+ggplot(rouge, aes(x = sl, y = body_depth)) + geom_point(color = "red") + geom_text(aes(label = fish_id), color = "red")
+ggplot(rouge, aes(x = sl, y = ap_length_corrected)) + geom_point(color = "red") + geom_text(aes(label = fish_id), color = "red")
+ggplot(rouge, aes(x = sl, y = ap_width_corrected)) + geom_point(color = "red") + geom_text(aes(label = fish_id), color = "red")
+ggplot(rouge, aes(x = sl, y = jaw_length)) + geom_point(color = "red") + geom_text(aes(label = fish_id), color = "red")
+ggplot(rouge, aes(x = sl, y = ppl)) + geom_point(color = "red") + geom_text(aes(label = fish_id), color = "red")
+ggplot(rouge, aes(x = sl, y = ppw)) + geom_point(color = "red") + geom_text(aes(label = fish_id), color = "red")
+ggplot(rouge, aes(x = sl, y = dorsal_1)) + geom_point(color = "red") + geom_text(aes(label = fish_id), color = "red")
+ggplot(rouge, aes(x = sl, y = dorsal_2)) + geom_point(color = "red") + geom_text(aes(label = fish_id), color = "red")
+ggplot(rouge, aes(x = sl, y = pelvic_spine)) + geom_point(color = "red") + geom_text(aes(label = fish_id), color = "red")
+ggplot(rouge, aes(x = sl, y = eye_diameter)) + geom_point(color = "red") + geom_text(aes(label = fish_id), color = "red")
+
+
+```
+
+
+```{r Check for outliers adjusted}
+#All lakes together
+ggplot(dataclean, aes(x = sl, y = body_depth.adj)) + geom_point() + geom_text(aes(label = fish_id))
+ggplot(dataclean, aes(x = sl, y = ap_length.adj)) + geom_point() + geom_text(aes(label = fish_id))
+ggplot(dataclean, aes(x = sl, y = ap_width.adj)) + geom_point() + geom_text(aes(label = fish_id))
+ggplot(dataclean, aes(x = sl, y = jaw_length.adj)) + geom_point() + geom_text(aes(label = fish_id))
+ggplot(dataclean, aes(x = sl, y = ppl.adj)) + geom_point() + geom_text(aes(label = fish_id))
+ggplot(dataclean, aes(x = sl, y = ppw.adj)) + geom_point() + geom_text(aes(label = fish_id))
+ggplot(dataclean, aes(x = sl, y = dorsal_1.adj)) + geom_point() + geom_text(aes(label = fish_id))
+ggplot(dataclean, aes(x = sl, y = dorsal_2.adj)) + geom_point() + geom_text(aes(label = fish_id))
+ggplot(dataclean, aes(x = sl, y = pelvic_spine.adj)) + geom_point() + geom_text(aes(label = fish_id))
+ggplot(dataclean, aes(x = sl, y = eye_diameter.adj)) + geom_point() + geom_text(aes(label = fish_id))
+
+#Boulton
+ggplot(boulton, aes(x = sl, y = body_depth.adj)) + geom_point(color = "purple") + geom_text(aes(label = fish_id), color = "purple")
+ggplot(boulton, aes(x = sl, y = ap_length.adj)) + geom_point(color = "purple") + geom_text(aes(label = fish_id), color = "purple")
+ggplot(boulton, aes(x = sl, y = ap_width.adj)) + geom_point(color = "purple") + geom_text(aes(label = fish_id), color = "purple")
+ggplot(boulton, aes(x = sl, y = jaw_length.adj)) + geom_point(color = "purple") + geom_text(aes(label = fish_id), color = "purple")
+ggplot(boulton, aes(x = sl, y = ppl.adj)) + geom_point(color = "purple") + geom_text(aes(label = fish_id), color = "purple")
+ggplot(boulton, aes(x = sl, y = ppw.adj)) + geom_point(color = "purple") + geom_text(aes(label = fish_id), color = "purple")
+ggplot(boulton, aes(x = sl, y = dorsal_1.adj)) + geom_point(color = "purple") + geom_text(aes(label = fish_id), color = "purple")
+ggplot(boulton, aes(x = sl, y = dorsal_2.adj)) + geom_point(color = "purple") + geom_text(aes(label = fish_id), color = "purple")
+ggplot(boulton, aes(x = sl, y = pelvic_spine.adj)) + geom_point(color = "purple") + geom_text(aes(label = fish_id), color = "purple")
+ggplot(boulton, aes(x = sl, y = eye_diameter.adj)) + geom_point(color = "purple") + geom_text(aes(label = fish_id), color = "purple")
+
+#Mayer
+ggplot(mayer, aes(x = sl, y = body_depth.adj)) + geom_point(color = "darkorange2") + geom_text(aes(label = fish_id), color = "darkorange2")
+ggplot(mayer, aes(x = sl, y = ap_length.adj)) + geom_point(color = "darkorange2") + geom_text(aes(label = fish_id), color = "darkorange2")
+ggplot(mayer, aes(x = sl, y = ap_width.adj)) + geom_point(color = "darkorange2") + geom_text(aes(label = fish_id), color = "darkorange2")
+ggplot(mayer, aes(x = sl, y = jaw_length.adj)) + geom_point(color = "darkorange2") + geom_text(aes(label = fish_id), color = "darkorange2")
+ggplot(mayer, aes(x = sl, y = ppl.adj)) + geom_point(color = "darkorange2") + geom_text(aes(label = fish_id), color = "darkorange2")
+ggplot(mayer, aes(x = sl, y = ppw.adj)) + geom_point(color = "darkorange2") + geom_text(aes(label = fish_id), color = "darkorange2")
+ggplot(mayer, aes(x = sl, y = dorsal_1.adj)) + geom_point(color = "darkorange2") + geom_text(aes(label = fish_id), color = "darkorange2")
+ggplot(mayer, aes(x = sl, y = dorsal_2.adj)) + geom_point(color = "darkorange2") + geom_text(aes(label = fish_id), color = "darkorange2")
+ggplot(mayer, aes(x = sl, y = pelvic_spine.adj)) + geom_point(color = "darkorange2") + geom_text(aes(label = fish_id), color = "darkorange2")
+ggplot(mayer, aes(x = sl, y = eye_diameter.adj)) + geom_point(color = "darkorange2") + geom_text(aes(label = fish_id), color = "darkorange2")
+
+#Drizzle
+ggplot(drizzle, aes(x = sl, y = body_depth.adj)) + geom_point(color = "chartreuse4") + geom_text(aes(label = fish_id), color = "chartreuse4")
+ggplot(drizzle, aes(x = sl, y = ap_length.adj)) + geom_point(color = "chartreuse4") + geom_text(aes(label = fish_id), color = "chartreuse4")
+ggplot(drizzle, aes(x = sl, y = ap_width.adj)) + geom_point(color = "chartreuse4") + geom_text(aes(label = fish_id), color = "chartreuse4")
+ggplot(drizzle, aes(x = sl, y = jaw_length.adj)) + geom_point(color = "chartreuse4") + geom_text(aes(label = fish_id), color = "chartreuse4")
+ggplot(drizzle, aes(x = sl, y = ppl.adj)) + geom_point(color = "chartreuse4") + geom_text(aes(label = fish_id), color = "chartreuse4")
+ggplot(drizzle, aes(x = sl, y = ppw.adj)) + geom_point(color = "chartreuse4") + geom_text(aes(label = fish_id), color = "chartreuse4")
+ggplot(drizzle, aes(x = sl, y = dorsal_1.adj)) + geom_point(color = "chartreuse4") + geom_text(aes(label = fish_id), color = "chartreuse4")
+ggplot(drizzle, aes(x = sl, y = dorsal_2.adj)) + geom_point(color = "chartreuse4") + geom_text(aes(label = fish_id), color = "chartreuse4")
+ggplot(drizzle, aes(x = sl, y = pelvic_spine.adj)) + geom_point(color = "chartreuse4") + geom_text(aes(label = fish_id), color = "chartreuse4")
+ggplot(drizzle, aes(x = sl, y = eye_diameter.adj)) + geom_point(color = "chartreuse4") + geom_text(aes(label = fish_id), color = "chartreuse4")
+
+#Serendipity
+ggplot(serendipity, aes(x = sl, y = body_depth.adj)) + geom_point(color = "blue") + geom_text(aes(label = fish_id), color = "blue")
+ggplot(serendipity, aes(x = sl, y = ap_length.adj)) + geom_point(color = "blue") + geom_text(aes(label = fish_id), color = "blue")
+ggplot(serendipity, aes(x = sl, y = ap_width.adj)) + geom_point(color = "blue") + geom_text(aes(label = fish_id), color = "blue")
+ggplot(serendipity, aes(x = sl, y = jaw_length.adj)) + geom_point(color = "blue") + geom_text(aes(label = fish_id), color = "blue")
+ggplot(serendipity, aes(x = sl, y = ppl.adj)) + geom_point(color = "blue") + geom_text(aes(label = fish_id), color = "blue")
+ggplot(serendipity, aes(x = sl, y = ppw.adj)) + geom_point(color = "blue") + geom_text(aes(label = fish_id), color = "blue")
+ggplot(serendipity, aes(x = sl, y = dorsal_1.adj)) + geom_point(color = "blue") + geom_text(aes(label = fish_id), color = "blue")
+ggplot(serendipity, aes(x = sl, y = dorsal_2.adj)) + geom_point(color = "blue") + geom_text(aes(label = fish_id), color = "blue")
+ggplot(serendipity, aes(x = sl, y = pelvic_spine.adj)) + geom_point(color = "blue") + geom_text(aes(label = fish_id), color = "blue")
+ggplot(serendipity, aes(x = sl, y = eye_diameter.adj)) + geom_point(color = "blue") + geom_text(aes(label = fish_id), color = "blue")
+
+#Rouge
+ggplot(rouge, aes(x = sl, y = body_depth.adj)) + geom_point(color = "red") + geom_text(aes(label = fish_id), color = "red")
+ggplot(rouge, aes(x = sl, y = ap_length.adj)) + geom_point(color = "red") + geom_text(aes(label = fish_id), color = "red")
+ggplot(rouge, aes(x = sl, y = ap_width.adj)) + geom_point(color = "red") + geom_text(aes(label = fish_id), color = "red")
+ggplot(rouge, aes(x = sl, y = jaw_length.adj)) + geom_point(color = "red") + geom_text(aes(label = fish_id), color = "red")
+ggplot(rouge, aes(x = sl, y = ppl.adj)) + geom_point(color = "red") + geom_text(aes(label = fish_id), color = "red")
+ggplot(rouge, aes(x = sl, y = ppw.adj)) + geom_point(color = "red") + geom_text(aes(label = fish_id), color = "red")
+ggplot(rouge, aes(x = sl, y = dorsal_1.adj)) + geom_point(color = "red") + geom_text(aes(label = fish_id), color = "red")
+ggplot(rouge, aes(x = sl, y = dorsal_2.adj)) + geom_point(color = "red") + geom_text(aes(label = fish_id), color = "red")
+ggplot(rouge, aes(x = sl, y = pelvic_spine.adj)) + geom_point(color = "red") + geom_text(aes(label = fish_id), color = "red")
+ggplot(rouge, aes(x = sl, y = eye_diameter.adj)) + geom_point(color = "red") + geom_text(aes(label = fish_id), color = "red")
+
+```
+
+
+
+2 way anova interaction of time and site with trait :/
+```{r Preliminary stats undefined eval=FALSE, include=FALSE}
+
+#Big Anovas
+
+#Anova for SL 
+#(time period NOT sig, water body SIG, SIG interaction as well)
+slanova <- aov(sl ~ time_period + body_of_water + time_period:body_of_water, data = dataclean)
+summary(slanova)
+
+#Anova for plates total L 
+#(time period SIG and water body SIG, interaction NOT sig, this means that time period has same effect throughout water bodies)
+planova <- aov(plate_l_total ~ time_period + body_of_water + time_period:body_of_water, data = dataclean)
+summary(planova)
+
+#Anova for body depth
+#(time period NOT sig, water body SIG, interaction SIG)
+bdanova <- aov(body_depth ~ time_period + body_of_water + time_period:body_of_water, data = dataclean)
+summary(bdanova)
+
+
+# T Tests
+
+#SL Boulton (sig increase)
+t.test(sl ~ time_period, data = boulton)
+
+#SL Drizzle
+t.test(sl ~ time_period, data = drizzle)
+
+#SL Mayer (sig increase)
+t.test(sl ~ time_period, data = mayer)
+
+#SL Serendipity
+t.test(sl ~ time_period, data = serendipity)
+
+#SL Rouge (sig decrease)
+t.test(sl ~ time_period, data = rouge)
+
+
+
+
+#Left Plates Boulton (Almost sig increase?)
+t.test(plate_l_total ~ time_period, data = boulton)
+
+#Left Plates Drizzle
+t.test(plate_l_total ~ time_period, data = drizzle)
+
+#Left Plates Mayer (SIG INCREASE)
+t.test(plate_l_total ~ time_period, data = mayer)
+
+#Left Plates Serendipity
+t.test(plate_l_total ~ time_period, data = serendipity)
+
+#Left Plates Rouge (SIG INCREASE)
+t.test(plate_l_total ~ time_period, data = rouge)
+
+
+
+
+#Body Depth Boulton (SIG INCREASE)
+t.test(body_depth ~ time_period, data = boulton)
+
+#Body Depth Drizzle
+t.test(body_depth ~ time_period, data = drizzle)
+
+#Body Depth Mayer
+t.test(body_depth ~ time_period, data = mayer)
+
+#Body Depth Serendipity
+t.test(body_depth ~ time_period, data = serendipity)
+
+#Body Depth Rouge
+t.test(body_depth ~ time_period, data = rouge)
+
+```
+
+
+```{r Plotting Preliminary, eval=FALSE, include=FALSE}
+
+#SL Boulton
+ggplot(data = boulton, aes(x = time_period, y = sl)) +
+  geom_boxplot() +
+  labs(title = "Boulton Lake Standard Length Historical/Present", 
+       x = "Time Period", y = "Standard Length (mm)") +
+  theme_minimal()
+
+#SL All
+ggplot(data = dataclean, aes(x = time_period, y = sl, color = body_of_water)) +
+  geom_boxplot() +
+  labs(title = "All Lakes Standard Length Historical/Present", 
+       x = "Time Period", y = "Standard Length (mm)") +
+  theme_minimal() +
+  scale_color_discrete(name = "Lake")
+
+#SL All but grouped by lake
+ggplot(data = dataclean, aes(x = body_of_water, y = sl, color = time_period)) +
+  geom_boxplot() +
+  labs(title = "All Lakes Standard Length Historical/Present", 
+       x = "Lake", y = "Standard Length (mm)") +
+  theme_minimal() +
+  scale_color_discrete(name = "Time Period")
+
+
+
+
+#Body Depth Boulton
+ggplot(data = boulton, aes(x = time_period, y = body_depth)) +
+  geom_boxplot() +
+  labs(title = "Boulton Lake Body Depth Historical/Present", 
+       x = "Time Period", y = "Body Depth (mm)") +
+  theme_minimal()
+
+#Body Depth All
+ggplot(data = dataclean, aes(x = time_period, y = body_depth, color = body_of_water)) +
+  geom_boxplot() +
+  labs(title = "All Lakes Body Depth Historical/Present", 
+       x = "Time Period", y = "Body Depth (mm)") +
+  theme_minimal() +
+  scale_color_discrete(name = "Lake")
+
+#Body Depth All but grouped by lake
+ggplot(data = dataclean, aes(x = body_of_water, y = body_depth, color = time_period)) +
+  geom_boxplot() +
+  labs(title = "All Lakes Body Depth Historical/Present", 
+       x = "Lake", y = "Body Depth (mm)") +
+  theme_minimal() +
+  scale_color_discrete(name = "Time Period")
+
+
+
+
+
+#Plate Total L Mayer
+ggplot(data = mayer, aes(x = time_period, y = plate_l_total)) +
+  geom_boxplot() +
+  labs(title = "Mayer Total Left Lateral Plate Count Historical/Present", 
+       x = "Time Period", y = "Number of Left Lateral Plates") +
+  theme_minimal()
+
+#Plate Total L All
+ggplot(data = dataclean, aes(x = time_period, y = plate_l_total, color = body_of_water)) +
+  geom_boxplot() +
+  labs(title = "All Lakes Total Left Lateral Plate Count Historical/Present", 
+       x = "Time Period", y = "Number of Left Lateral Plates") +
+  theme_minimal() +
+  scale_color_discrete(name = "Lake")
+
+#Plate Total L All but grouped by lake
+ggplot(data = dataclean, aes(x = body_of_water, y = plate_l_total, color = time_period)) +
+  geom_boxplot() +
+  labs(title = "All Lakes Total Left Lateral Plate Count Historical/Present", 
+       x = "Lake", y = "Number of Left Lateral Plates") +
+  theme_minimal() +
+  scale_color_discrete(name = "Time Period")
+  
+  
+  
+  
+#SL ALL BUT LINEY (bad and horrible)
+ggplot (data = dataclean, aes(x = time_period, y = sl, color = body_of_water)) +
+  geom_boxplot() +
+  geom_line(aes(group = body_of_water), linetype=2, size=1.3) 
+
+```
+
+
+Standard Length, L plate count, R plate count, Total plate count 
+```{r Plotting Numerical Unadjusted}
+
+#SL grouped by lake
+ggplot(data = dataclean, aes(x = body_of_water, y = sl, color = time_period, fill = type)) +
+  geom_boxplot() +
+  labs(title = "All Lakes Standard Length Historical/Present", 
+       x = "Lake", y = "Standard Length (mm)") +
+  theme_minimal() +
+  scale_color_manual(name = "Time Period", values = c("darkgoldenrod", "dodgerblue4"))+
+  scale_fill_manual(name = "Stickleback \nType", values = c("#c7f9ff", "#d4ffeb"))
+
+
+#L Plate Total grouped by lake
+ggplot(data = dataclean, aes(x = body_of_water, y = plate_l_total, color = time_period, fill = type)) +
+  geom_boxplot() +
+  labs(title = "All Lakes Total Left Lateral Plate Count Historical/Present", 
+       x = "Lake", y = "Number of Left Lateral Plates") +
+  theme_minimal() +
+  scale_color_manual(name = "Time Period", values = c("darkgoldenrod", "dodgerblue4"))+
+  scale_fill_manual(name = "Stickleback \nType", values = c("#c7f9ff", "#d4ffeb"))
+
+```
+
+
+Need to adjust so unarmoured and armoured are grouped and coloured
+Body Depth, AP L and W, Jaw Length, PPL, PPW D1, D2, PS and ED
+```{r Plotting Numerical Adjusted}
+
+#Body Depth Adjusted grouped by Lake
+ggplot(data = dataclean, aes(x = body_of_water, y = body_depth.adj, color = time_period)) +
+  geom_boxplot() +
+  labs(title = "All Lakes Body Depth Historical/Present", 
+       x = "Lake", y = "Body Depth Adjusted by Standard Length") +
+  theme_minimal() +
+  scale_color_discrete(name = "Time Period")
+
+#AP Length Adjusted grouped by Lake
+ggplot(data = dataclean, aes(x = body_of_water, y = ap_length.adj, color = time_period)) +
+  geom_boxplot() +
+  labs(title = "All Lakes Ascending Process Width Historical/Present", 
+       x = "Lake", y = "Ascending Process Length Adjusted by Standard Length") +
+  theme_minimal() +
+  scale_color_discrete(name = "Time Period")
+
+#AP Width Adjusted grouped by Lake
+ggplot(data = dataclean, aes(x = body_of_water, y = ap_width.adj, color = time_period)) +
+  geom_boxplot() +
+  labs(title = "All Lakes Ascending Process Width Historical/Present", 
+       x = "Lake", y = "Ascending Process Width Adjusted by Standard Length") +
+  theme_minimal() +
+  scale_color_discrete(name = "Time Period")
+
+
+#Jaw Length Adjusted grouped by Lake
+ggplot(data = dataclean, aes(x = body_of_water, y = jaw_length.adj, color = time_period)) +
+  geom_boxplot() +
+  labs(title = "All Lakes Jaw Length Historical/Present", 
+       x = "Lake", y = "Jaw Length Adjusted by Standard Length") +
+  theme_minimal() +
+  scale_color_discrete(name = "Time Period")
+
+
+#PPL Adjusted grouped by Lake
+ggplot(data = dataclean, aes(x = body_of_water, y = ppl.adj, color = time_period)) +
+  geom_boxplot() +
+  labs(title = "All Lakes Pelvic Plate Length Historical/Present", 
+       x = "Lake", y = "Pelvic Plate Length Adjusted by Standard Length") +
+  theme_minimal() +
+  scale_color_discrete(name = "Time Period")
+
+
+#PPW Adjusted grouped by Lake
+ggplot(data = dataclean, aes(x = body_of_water, y = ppw.adj, color = time_period)) +
+  geom_boxplot() +
+  labs(title = "All Lakes Pelvic Plate Width Historical/Present", 
+       x = "Lake", y = "Pelvic Plate Width Adjusted by Standard Length") +
+  theme_minimal() +
+  scale_color_discrete(name = "Time Period")
+
+#D1 Adjusted grouped by Lake
+ggplot(data = dataclean, aes(x = body_of_water, y = dorsal_1.adj, color = time_period)) +
+  geom_boxplot() +
+  labs(title = "All Lakes Dorsal Spine 1 Length Historical/Present", 
+       x = "Lake", y = "Dorsal Spine 1 Length Adjusted by Standard Length") +
+  theme_minimal() +
+  scale_color_discrete(name = "Time Period")
+
+#D2 Adjusted grouped by Lake
+ggplot(data = dataclean, aes(x = body_of_water, y = dorsal_2.adj, color = time_period)) +
+  geom_boxplot() +
+  labs(title = "All Lakes Dorsal Spine 2 Length Historical/Present", 
+       x = "Lake", y = "Dorsal Spine 2 Length Adjusted by Standard Length") +
+  theme_minimal() +
+  scale_color_discrete(name = "Time Period")
+
+#PS Adjusted grouped by Lake
+ggplot(data = dataclean, aes(x = body_of_water, y = pelvic_spine.adj, color = time_period)) +
+  geom_boxplot() +
+  labs(title = "All Lakes Pelvic Spine Length Historical/Present", 
+       x = "Lake", y = "Pelvic Spine Length Adjusted by Standard Length") +
+  theme_minimal() +
+  scale_color_discrete(name = "Time Period")
+
+#ED Adjusted grouped by Lake
+ggplot(data = dataclean, aes(x = body_of_water, y = eye_diameter.adj, color = time_period)) +
+  geom_boxplot() +
+  labs(title = "All Lakes Eye Diameter Historical/Present", 
+       x = "Lake", y = "Eye Diameter Adjusted by Standard Length") +
+  theme_minimal() +
+  scale_color_discrete(name = "Time Period")
+
+
+```
+
+
+Parasites, AP, D1, D2, PP, PS, D3
+```{r Plotting Presence/Absence}
+
+#Parasites Boulton
+ggplot(data = boulton, aes(x =  time_period, fill = parasites)) +
+  geom_bar(stat = "count", position = "fill") +
+  labs(title = "Boulton Lake Parasites Historical/Present", 
+       x = "Time Period", y = "Proportion of Fish") +
+  theme_minimal() +
+  scale_fill_manual(name = "Parasites", values = c("orange", "seagreen4", "tomato"))
+
+#Parasites Mayer
+ggplot(data = mayer, aes(x =  time_period, fill = parasites)) +
+  geom_bar(stat = "count", position = "fill") +
+  labs(title = "Mayer Lake Parasites Historical/Present", 
+       x = "Time Period", y = "Proportion of Fish") +
+  theme_minimal() +
+  scale_fill_manual(name = "Parasites", values = c("seagreen4", "tomato"))
+
+#Parasites Drizzle
+ggplot(data = drizzle, aes(x =  time_period, fill = parasites)) +
+  geom_bar(stat = "count", position = "fill") +
+  labs(title = "Drizzle Lake Parasites Historical/Present", 
+       x = "Time Period", y = "Proportion of Fish") +
+  theme_minimal() +
+  scale_fill_manual(name = "Parasites", values = c("seagreen4", "tomato"))
+
+#Parasites Serendipity
+ggplot(data = serendipity, aes(x =  time_period, fill = parasites)) +
+  geom_bar(stat = "count", position = "fill") +
+  labs(title = "Serendipity Lake Parasites Historical/Present", 
+       x = "Time Period", y = "Proportion of Fish") +
+  theme_minimal() +
+  scale_fill_manual(name = "Parasites", values = c("seagreen4", "tomato"))
+
+#Parasites Rouge
+ggplot(data = rouge, aes(x =  time_period, fill = parasites)) +
+  geom_bar(stat = "count", position = "fill") +
+  labs(title = "Rouge Lake Parasites Historical/Present", 
+       x = "Time Period", y = "Proportion of Fish") +
+  theme_minimal() +
+  scale_fill_manual(name = "Parasites", values = c("orange", "seagreen4", "tomato"))
+
+
+
+#Ascending Process Presence Boulton
+ggplot(data = boulton, aes(x =  time_period, fill = ap_pa)) +
+  geom_bar(stat = "count", position = "fill") +
+  labs(title = "Boulton Lake Ascending Process Presence Historical/Present", 
+       x = "Time Period", y = "Proportion of Fish") +
+  theme_minimal() +
+  scale_fill_manual(name = "Presence", values = c("indianred", "olivedrab4"))
+
+#Ascending Process Presence Mayer
+ggplot(data = mayer, aes(x =  time_period, fill = ap_pa)) +
+  geom_bar(stat = "count", position = "fill") +
+  labs(title = "Mayer Lake Ascending Process Presence Historical/Present", 
+       x = "Time Period", y = "Proportion of Fish") +
+  theme_minimal() +
+  scale_fill_manual(name = "Presence", values = c("olivedrab4"))
+
+#Ascending Process Presence Drizzle
+ggplot(data = drizzle, aes(x =  time_period, fill = ap_pa)) +
+  geom_bar(stat = "count", position = "fill") +
+  labs(title = "Drizzle Lake Ascending Process Presence Historical/Present", 
+       x = "Time Period", y = "Proportion of Fish") +
+  theme_minimal() +
+  scale_fill_manual(name = "Presence", values = c("olivedrab4"))
+
+#Ascending Process Presence Serendipity
+ggplot(data = serendipity, aes(x =  time_period, fill = ap_pa)) +
+  geom_bar(stat = "count", position = "fill") +
+  labs(title = "Serendipity Lake Ascending Process Presence Historical/Present", 
+       x = "Time Period", y = "Proportion of Fish") +
+  theme_minimal() +
+  scale_fill_manual(name = "Presence", values = c("indianred", "olivedrab4"))
+
+#Ascending Process Presence Rouge
+ggplot(data = rouge, aes(x =  time_period, fill = ap_pa)) +
+  geom_bar(stat = "count", position = "fill") +
+  labs(title = "Rouge Lake Ascending Process Presence Historical/Present", 
+       x = "Time Period", y = "Proportion of Fish") +
+  theme_minimal() +
+  scale_fill_manual(name = "Presence", values = c("olivedrab4"))
+
+
+
+
+#Dorsal Spine 1 Presence Boulton
+ggplot(data = boulton, aes(x =  time_period, fill = dorsal_1_pa)) +
+  geom_bar(stat = "count", position = "fill") +
+  labs(title = "Boulton Lake Dorsal Spine 1 Presence Historical/Present", 
+       x = "Time Period", y = "Proportion of Fish") +
+  theme_minimal() +
+  scale_fill_manual(name = "Presence", values = c("indianred", "olivedrab4"))
+
+#Dorsal Spine 1 Presence Mayer
+ggplot(data = mayer, aes(x =  time_period, fill = dorsal_1_pa)) +
+  geom_bar(stat = "count", position = "fill") +
+  labs(title = "Mayer Lake Dorsal Spine 1 Presence Historical/Present", 
+       x = "Time Period", y = "Proportion of Fish") +
+  theme_minimal() +
+  scale_fill_manual(name = "Presence", values = c("olivedrab4"))
+
+#Dorsal Spine 1 Presence Drizzle
+ggplot(data = drizzle, aes(x =  time_period, fill = dorsal_1_pa)) +
+  geom_bar(stat = "count", position = "fill") +
+  labs(title = "Drizzle Lake Dorsal Spine 1 Presence Historical/Present", 
+       x = "Time Period", y = "Proportion of Fish") +
+  theme_minimal() +
+  scale_fill_manual(name = "Presence", values = c("olivedrab4"))
+
+#Dorsal Spine 1 Presence Serendipity
+ggplot(data = serendipity, aes(x =  time_period, fill = dorsal_1_pa)) +
+  geom_bar(stat = "count", position = "fill") +
+  labs(title = "Serendipity Lake Dorsal Spine 1 Presence Historical/Present", 
+       x = "Time Period", y = "Proportion of Fish") +
+  theme_minimal() +
+  scale_fill_manual(name = "Presence", values = c("indianred", "olivedrab4"))
+
+#Dorsal Spine 1 Presence Rouge
+ggplot(data = rouge, aes(x =  time_period, fill = dorsal_1_pa)) +
+  geom_bar(stat = "count", position = "fill") +
+  labs(title = "Rouge Lake Dorsal Spine 1 Presence Historical/Present", 
+       x = "Time Period", y = "Proportion of Fish") +
+  theme_minimal() +
+  scale_fill_manual(name = "Presence", values = c("indianred","olivedrab4"))
+
+
+
+
+#Dorsal Spine 2 Presence Boulton
+ggplot(data = boulton, aes(x =  time_period, fill = dorsal_2_pa)) +
+  geom_bar(stat = "count", position = "fill") +
+  labs(title = "Boulton Lake Dorsal Spine 2 Presence Historical/Present", 
+       x = "Time Period", y = "Proportion of Fish") +
+  theme_minimal() +
+  scale_fill_manual(name = "Presence", values = c("indianred", "olivedrab4"))
+
+#Dorsal Spine 2 Presence Mayer
+ggplot(data = mayer, aes(x =  time_period, fill = dorsal_2_pa)) +
+  geom_bar(stat = "count", position = "fill") +
+  labs(title = "Mayer Lake Dorsal Spine 2 Presence Historical/Present", 
+       x = "Time Period", y = "Proportion of Fish") +
+  theme_minimal() +
+  scale_fill_manual(name = "Presence", values = c("olivedrab4"))
+
+#Dorsal Spine 2 Presence Drizzle
+ggplot(data = drizzle, aes(x =  time_period, fill = dorsal_2_pa)) +
+  geom_bar(stat = "count", position = "fill") +
+  labs(title = "Drizzle Lake Dorsal Spine 2 Presence Historical/Present", 
+       x = "Time Period", y = "Proportion of Fish") +
+  theme_minimal() +
+  scale_fill_manual(name = "Presence", values = c("olivedrab4"))
+
+#Dorsal Spine 2 Presence Serendipity
+ggplot(data = serendipity, aes(x =  time_period, fill = dorsal_2_pa)) +
+  geom_bar(stat = "count", position = "fill") +
+  labs(title = "Serendipity Lake Dorsal Spine 2 Presence Historical/Present", 
+       x = "Time Period", y = "Proportion of Fish") +
+  theme_minimal() +
+  scale_fill_manual(name = "Presence", values = c("olivedrab4"))
+
+#Dorsal Spine 2 Presence Rouge
+ggplot(data = rouge, aes(x =  time_period, fill = dorsal_2_pa)) +
+  geom_bar(stat = "count", position = "fill") +
+  labs(title = "Rouge Lake Dorsal Spine 2 Presence Historical/Present", 
+       x = "Time Period", y = "Proportion of Fish") +
+  theme_minimal() +
+  scale_fill_manual(name = "Presence", values = c("olivedrab4"))
+
+
+
+
+#Dorsal Spine 3 Presence Boulton
+ggplot(data = boulton, aes(x =  time_period, fill = dorsal_3_pa)) +
+  geom_bar(stat = "count", position = "fill") +
+  labs(title = "Boulton Lake Dorsal Spine 3 Presence Historical/Present", 
+       x = "Time Period", y = "Proportion of Fish") +
+  theme_minimal() +
+  scale_fill_manual(name = "Presence", values = c("indianred", "olivedrab4"))
+
+#Dorsal Spine 3 Presence Mayer
+ggplot(data = mayer, aes(x =  time_period, fill = dorsal_3_pa)) +
+  geom_bar(stat = "count", position = "fill") +
+  labs(title = "Mayer Lake Dorsal Spine 3 Presence Historical/Present", 
+       x = "Time Period", y = "Proportion of Fish") +
+  theme_minimal() +
+  scale_fill_manual(name = "Presence", values = c("indianred", "olivedrab4"))
+
+#Dorsal Spine 3 Presence Drizzle
+ggplot(data = drizzle, aes(x =  time_period, fill = dorsal_3_pa)) +
+  geom_bar(stat = "count", position = "fill") +
+  labs(title = "Drizzle Lake Dorsal Spine 3 Presence Historical/Present", 
+       x = "Time Period", y = "Proportion of Fish") +
+  theme_minimal() +
+  scale_fill_manual(name = "Presence", values = c("olivedrab4"))
+
+#Dorsal Spine 3 Presence Serendipity
+ggplot(data = serendipity, aes(x =  time_period, fill = dorsal_3_pa)) +
+  geom_bar(stat = "count", position = "fill") +
+  labs(title = "Serendipity Lake Dorsal Spine 3 Presence Historical/Present", 
+       x = "Time Period", y = "Proportion of Fish") +
+  theme_minimal() +
+  scale_fill_manual(name = "Presence", values = c("olivedrab4"))
+
+#Dorsal Spine 3 Presence Rouge
+ggplot(data = rouge, aes(x =  time_period, fill = dorsal_3_pa)) +
+  geom_bar(stat = "count", position = "fill") +
+  labs(title = "Rouge Lake Dorsal Spine 3 Presence Historical/Present", 
+       x = "Time Period", y = "Proportion of Fish") +
+  theme_minimal() +
+  scale_fill_manual(name = "Presence", values = c("indianred", "olivedrab4"))
+
+
+
+
+#Pelvic Plate Presence Boulton
+ggplot(data = boulton, aes(x =  time_period, fill = pp_pa)) +
+  geom_bar(stat = "count", position = "fill") +
+  labs(title = "Boulton Lake Pelvic Plate Presence Historical/Present", 
+       x = "Time Period", y = "Proportion of Fish") +
+  theme_minimal() +
+  scale_fill_manual(name = "Presence", values = c("indianred", "olivedrab4"))
+
+#Pelvic Plate Presence Mayer
+ggplot(data = mayer, aes(x =  time_period, fill = pp_pa)) +
+  geom_bar(stat = "count", position = "fill") +
+  labs(title = "Mayer Lake Pelvic Plate Presence Historical/Present", 
+       x = "Time Period", y = "Proportion of Fish") +
+  theme_minimal() +
+  scale_fill_manual(name = "Presence", values = c("olivedrab4"))
+
+#Pelvic Plate Presence Drizzle
+ggplot(data = drizzle, aes(x =  time_period, fill = pp_pa)) +
+  geom_bar(stat = "count", position = "fill") +
+  labs(title = "Drizzle Lake Pelvic Plate Presence Historical/Present", 
+       x = "Time Period", y = "Proportion of Fish") +
+  theme_minimal() +
+  scale_fill_manual(name = "Presence", values = c("olivedrab4"))
+
+#Pelvic Plate Presence Serendipity
+ggplot(data = serendipity, aes(x =  time_period, fill = pp_pa)) +
+  geom_bar(stat = "count", position = "fill") +
+  labs(title = "Serendipity Lake Pelvic Plate Presence Historical/Present", 
+       x = "Time Period", y = "Proportion of Fish") +
+  theme_minimal() +
+  scale_fill_manual(name = "Presence", values = c("indianred","olivedrab4"))
+
+#Pelvic Plate Presence Rouge
+ggplot(data = rouge, aes(x =  time_period, fill = pp_pa)) +
+  geom_bar(stat = "count", position = "fill") +
+  labs(title = "Rouge Lake Pelvic Plate Presence Historical/Present", 
+       x = "Time Period", y = "Proportion of Fish") +
+  theme_minimal() +
+  scale_fill_manual(name = "Presence", values = c("olivedrab4"))
+
+
+
+
+#Pelvic Spine Presence Boulton
+ggplot(data = boulton, aes(x =  time_period, fill = pelvic_spine_pa)) +
+  geom_bar(stat = "count", position = "fill") +
+  labs(title = "Boulton Lake Pelvic Spine Presence Historical/Present", 
+       x = "Time Period", y = "Proportion of Fish") +
+  theme_minimal() +
+  scale_fill_manual(name = "Presence", values = c("indianred", "olivedrab4"))
+#Pelvic Spine Presence Mayer
+ggplot(data = mayer, aes(x =  time_period, fill = pelvic_spine_pa)) +
+  geom_bar(stat = "count", position = "fill") +
+  labs(title = "Mayer Lake Pelvic Spine Presence Historical/Present", 
+       x = "Time Period", y = "Proportion of Fish") +
+  theme_minimal() +
+  scale_fill_manual(name = "Presence", values = c("olivedrab4"))
+
+#Pelvic Spine Presence Drizzle
+ggplot(data = drizzle, aes(x =  time_period, fill = pelvic_spine_pa)) +
+  geom_bar(stat = "count", position = "fill") +
+  labs(title = "Drizzle Lake Pelvic Spine Presence Historical/Present", 
+       x = "Time Period", y = "Proportion of Fish") +
+  theme_minimal() +
+  scale_fill_manual(name = "Presence", values = c("olivedrab4"))
+
+#Pelvic Spine Presence Serendipity
+ggplot(data = serendipity, aes(x =  time_period, fill = pelvic_spine_pa)) +
+  geom_bar(stat = "count", position = "fill") +
+  labs(title = "Serendipity Lake Pelvic Spine Presence Historical/Present", 
+       x = "Time Period", y = "Proportion of Fish") +
+  theme_minimal() +
+  scale_fill_manual(name = "Presence", values = c("indianred","olivedrab4"))
+
+#Pelvic Spine Presence Rouge
+ggplot(data = rouge, aes(x =  time_period, fill = pelvic_spine_pa)) +
+  geom_bar(stat = "count", position = "fill") +
+  labs(title = "Rouge Lake Pelvic Spine Presence Historical/Present", 
+       x = "Time Period", y = "Proportion of Fish") +
+  theme_minimal() +
+  scale_fill_manual(name = "Presence", values = c("olivedrab4"))
+
+```
+
+
+Most common Plate arrangements (histogram by lakes past present), all four years one trait
+```{r Plotting Other}
+
+#Boulton Only showing the years all same
+ggplot(data = boulton, aes(x = as.factor(year), y = body_depth.adj, color = time_period)) +
+  geom_boxplot() +
+  labs(title = "Boulton Lake Body Depth Historical/Present", 
+       x = "Lake", y = "Body Depth Adjusted by Standard Length") +
+  theme_minimal() +
+  scale_color_discrete(name = "Time Period")
+
+
+
+
+#Boulton Left Historical
+ggplot(data = filter(boulton, time_period == "Historical"), aes(x = plate_l_combined)) +
+  geom_histogram(stat = "count", fill = "purple") +
+  labs(title = "Boulton Left Plate Arrangements Historical", 
+       x = "Plate Arrangement", y = "Count") +
+  theme_minimal()
+#ggsave("boultonLhis.png", height = 8, width = 16, unit = "cm")
+#Boulton Left Present
+ggplot(data = filter(boulton, time_period == "Present"), aes(x = plate_l_combined)) +
+  geom_histogram(stat = "count", fill = "purple") +
+  labs(title = "Boulton Left Plate Arrangements Present", 
+       x = "Plate Arrangement", y = "Count") +
+  theme_minimal()
+#ggsave("boultonLpres.png", height = 8, width = 16, unit = "cm")
+
+#Boulton Right Historical
+ggplot(data = filter(boulton, time_period == "Historical"), aes(x = plate_r_combined)) +
+  geom_histogram(stat = "count", fill = "purple") +
+  labs(title = "Boulton Right Plate Arrangements Historical", 
+       x = "Plate Arrangement", y = "Count") +
+  theme_minimal()
+#Boulton Right Present
+ggplot(data = filter(boulton, time_period == "Present"), aes(x = plate_r_combined)) +
+  geom_histogram(stat = "count", fill = "purple") +
+  labs(title = "Boulton Right Plate Arrangements Present", 
+       x = "Plate Arrangement", y = "Count") +
+  theme_minimal()
+
+
+
+#Mayer Left Historical
+ggplot(data = filter(mayer, time_period == "Historical"), aes(x = plate_l_combined)) +
+  geom_histogram(stat = "count", fill = "darkorange2") +
+  labs(title = "Mayer Left Plate Arrangements Historical", 
+       x = "Plate Arrangement", y = "Count") +
+  theme_minimal()
+#Mayer Left Present
+ggplot(data = filter(mayer, time_period == "Present"), aes(x = plate_l_combined)) +
+  geom_histogram(stat = "count", fill = "darkorange2") +
+  labs(title = "Mayer Left Plate Arrangements Present", 
+       x = "Plate Arrangement", y = "Count") +
+  theme_minimal()
+
+#Mayer Right Historical
+ggplot(data = filter(mayer, time_period == "Historical"), aes(x = plate_r_combined)) +
+  geom_histogram(stat = "count", fill = "darkorange2") +
+  labs(title = "Mayer Right Plate Arrangements Historical", 
+       x = "Plate Arrangement", y = "Count") +
+  theme_minimal()
+#Mayer Right Present
+ggplot(data = filter(mayer, time_period == "Present"), aes(x = plate_r_combined)) +
+  geom_histogram(stat = "count", fill = "darkorange2") +
+  labs(title = "Mayer Right Plate Arrangements Present", 
+       x = "Plate Arrangement", y = "Count") +
+  theme_minimal()
+
+
+
+#Drizzle Left Historical
+ggplot(data = filter(drizzle, time_period == "Historical"), aes(x = plate_l_combined)) +
+  geom_histogram(stat = "count", fill = "chartreuse4") +
+  labs(title = "Drizzle Left Plate Arrangements Historical", 
+       x = "Plate Arrangement", y = "Count") +
+  theme_minimal()
+#Drizzle Left Present
+ggplot(data = filter(drizzle, time_period == "Present"), aes(x = plate_l_combined)) +
+  geom_histogram(stat = "count", fill = "chartreuse4") +
+  labs(title = "Drizzle Left Plate Arrangements Present", 
+       x = "Plate Arrangement", y = "Count") +
+  theme_minimal()
+
+#Drizzle Right Historical
+ggplot(data = filter(drizzle, time_period == "Historical"), aes(x = plate_r_combined)) +
+  geom_histogram(stat = "count", fill = "chartreuse4") +
+  labs(title = "Drizzle Right Plate Arrangements Historical", 
+       x = "Plate Arrangement", y = "Count") +
+  theme_minimal()
+#Drizzle Right Present
+ggplot(data = filter(drizzle, time_period == "Present"), aes(x = plate_r_combined)) +
+  geom_histogram(stat = "count", fill = "chartreuse4") +
+  labs(title = "Drizzle Right Plate Arrangements Present", 
+       x = "Plate Arrangement", y = "Count") +
+  theme_minimal()
+
+
+
+#Serendipity Left Historical
+ggplot(data = filter(serendipity, time_period == "Historical"), aes(x = plate_l_combined)) +
+  geom_histogram(stat = "count", fill = "blue") +
+  labs(title = "Serendipity Left Plate Arrangements Historical", 
+       x = "Plate Arrangement", y = "Count") +
+  theme_minimal()
+#Serendipity Left Present
+ggplot(data = filter(serendipity, time_period == "Present"), aes(x = plate_l_combined)) +
+  geom_histogram(stat = "count", fill = "blue") +
+  labs(title = "Serendipity Left Plate Arrangements Present", 
+       x = "Plate Arrangement", y = "Count") +
+  theme_minimal()
+
+#Serendipity Right Historical
+ggplot(data = filter(serendipity, time_period == "Historical"), aes(x = plate_r_combined)) +
+  geom_histogram(stat = "count", fill = "blue") +
+  labs(title = "Serendipity Right Plate Arrangements Historical", 
+       x = "Plate Arrangement", y = "Count") +
+  theme_minimal()
+#Serendipity Right Present
+ggplot(data = filter(serendipity, time_period == "Present"), aes(x = plate_r_combined)) +
+  geom_histogram(stat = "count", fill = "blue") +
+  labs(title = "Serendipity Right Plate Arrangements Present", 
+       x = "Plate Arrangement", y = "Count") +
+  theme_minimal()
+
+
+
+#Rouge Left Historical
+ggplot(data = filter(rouge, time_period == "Historical"), aes(x = plate_l_combined)) +
+  geom_histogram(stat = "count", fill = "red") +
+  labs(title = "Rouge Left Plate Arrangements Historical", 
+       x = "Plate Arrangement", y = "Count") +
+  theme_minimal()
+#ggsave("rougeLhis.png", height = 8, width = 16, unit = "cm")
+#Rouge Left Present
+ggplot(data = filter(rouge, time_period == "Present"), aes(x = plate_l_combined)) +
+  geom_histogram(stat = "count", fill = "red") +
+  labs(title = "Rouge Left Plate Arrangements Present", 
+       x = "Plate Arrangement", y = "Count") +
+  theme_minimal()
+#ggsave("rougeLpres.png", height = 8, width = 16, unit = "cm")
+
+#Rouge Right Historical
+ggplot(data = filter(rouge, time_period == "Historical"), aes(x = plate_r_combined)) +
+  geom_histogram(stat = "count", fill = "red") +
+  labs(title = "Rouge Right Plate Arrangements Historical", 
+       x = "Plate Arrangement", y = "Count") +
+  theme_minimal()
+#Rouge Right Present
+ggplot(data = filter(rouge, time_period == "Present"), aes(x = plate_r_combined)) +
+  geom_histogram(stat = "count", fill = "red") +
+  labs(title = "Rouge Right Plate Arrangements Present", 
+       x = "Plate Arrangement", y = "Count") +
+  theme_minimal()
+#ggsave("rougeRpres.png", height = 8, width = 16, unit = "cm")
+
+```
+
+
+
+Do the plots for SL, LPlate, D1, D2, and PS to merge into one big figure
+```{r Multiplotting}
+
+#SL grouped by lake
+sl <- ggplot(data = dataclean, aes(x = body_of_water, y = sl, color = time_period, fill = type)) +
+  geom_boxplot(show.legend = FALSE) +
+  labs(y = "Standard Length (mm)") +
+  theme_minimal() +
+  scale_color_manual(name = "Time Period", values = c("darkgoldenrod", "dodgerblue4"))+
+  scale_fill_manual(name = "Stickleback \nType", values = c("#c7f9ff", "#d4ffeb"))+
+  scale_x_discrete(name = "", labels = c("Drizzle", "Mayer", "Serendipity", "Boulton", "Rouge"))
+
+
+#L Plate Total grouped by lake
+plate <- ggplot(data = dataclean, aes(x = body_of_water, y = plate_l_total, color = time_period, fill = type)) +
+  geom_boxplot(show.legend = FALSE) +
+  labs(y = "Number of Left Lateral Plates") +
+  theme_minimal() +
+  scale_color_manual(name = "Time Period", values = c("darkgoldenrod", "dodgerblue4"))+
+  scale_fill_manual(name = "Stickleback \nType", values = c("#c7f9ff", "#d4ffeb"))+
+  scale_x_discrete(name = "", labels = c("Drizzle", "Mayer", "Serendipity", "Boulton", "Rouge"))
+
+
+#D1 Adjusted grouped by Lake
+D1 <- ggplot(data = dataclean, aes(x = body_of_water, y = dorsal_1.adj, color = time_period, fill = type)) +
+  geom_boxplot(show.legend = FALSE) +
+  labs(y = "Dorsal Spine 1 Length Adjusted") +
+  theme_minimal() +
+  scale_color_manual(name = "Time Period", values = c("darkgoldenrod", "dodgerblue4"))+
+  scale_fill_manual(name = "Stickleback \nType", values = c("#c7f9ff", "#d4ffeb"))+
+  scale_x_discrete(name = "", labels = c("Drizzle", "Mayer", "Serendipity", "Boulton", "Rouge"))
+
+#D2 Adjusted grouped by Lake
+D2 <- ggplot(data = dataclean, aes(x = body_of_water, y = dorsal_2.adj, color = time_period, fill = type)) +
+  geom_boxplot(show.legend = FALSE) +
+  labs(y = "Dorsal Spine 2 Length Adjusted") +
+  theme_minimal() +
+  scale_color_manual(name = "Time Period", values = c("darkgoldenrod", "dodgerblue4"))+
+  scale_fill_manual(name = "Stickleback \nType", values = c("#c7f9ff", "#d4ffeb"))+
+  scale_x_discrete(name = "", labels = c("Drizzle", "Mayer", "Serendipity", "Boulton", "Rouge"))
+
+#PS Adjusted grouped by Lake
+PS <- ggplot(data = dataclean, aes(x = body_of_water, y = pelvic_spine.adj, color = time_period, fill = type)) +
+  geom_boxplot(show.legend = FALSE) +
+  labs(y = "Pelvic Spine Length Adjusted") +
+  theme_minimal() +
+  scale_color_manual(name = "Time Period", values = c("darkgoldenrod", "dodgerblue4"))+
+  scale_fill_manual(name = "Stickleback \nType", values = c("#c7f9ff", "#d4ffeb"))+
+  scale_x_discrete(name = "", labels = c("Drizzle", "Mayer", "Serendipity", "Boulton", "Rouge"))
+
+#ggsave("SL.jpg", plot = sl, height = 10, width = 11, unit = "cm")
+#ggsave("plate.jpg", plot = plate, height = 10, width = 11, unit = "cm")
+#ggsave("D1.jpg", plot = D1, height = 10, width = 11, unit = "cm")
+#ggsave("D2.jpg", plot = D2, height = 10, width = 11, unit = "cm")
+#ggsave("PS.jpg", plot = PS, height = 10, width = 11, unit = "cm")
+
+
+#ggarrange(sl, plate, D1, D2, PS, labels = c("A", "B", "C", "D", "E"))
+
+```
+
+
+```{r Plots for Export Presentation, eval=FALSE, include=FALSE}
+
+#SL Boulton
+ggplot(data = boulton, aes(x = time_period, y = sl)) +
+  geom_boxplot(fill = "darkorchid1") +
+  labs(title = "Boulton Lake Standard Length \nHistorical/Present", 
+       x = "Time Period", y = "Standard Length (mm)") +
+  theme_minimal() +
+  scale_color_discrete(name = "Time Period")
+#ggsave("SLBoulton.jpg", height = 15, width = 11, unit = "cm")
+#SL Drizzle
+ggplot(data = drizzle, aes(x = time_period, y = sl)) +
+  geom_boxplot(fill = "chartreuse3") +
+  labs(title = "Drizzle Lake Standard Length \nHistorical/Present", 
+       x = "Time Period", y = "Standard Length (mm)") +
+  theme_minimal() +
+  scale_color_discrete(name = "Time Period")
+#ggsave("SLDrizzle.jpg", height = 15, width = 11, unit = "cm")
+#SL Mayer
+ggplot(data = mayer, aes(x = time_period, y = sl)) +
+  geom_boxplot(fill = "darkorange2") +
+  labs(title = "Mayer Lake Standard Length \nHistorical/Present", 
+       x = "Time Period", y = "Standard Length (mm)") +
+  theme_minimal() +
+  scale_color_discrete(name = "Time Period")
+#ggsave("SLMayer.jpg", height = 15, width = 11, unit = "cm")
+
+
+
+
+
+#L Plate Mayer
+ggplot(data = mayer, aes(x = time_period, y = plate_l_total)) +
+  geom_boxplot(fill = "darkorange2") +
+  labs(title = "Mayer Lake Total Left Lateral Plate Count \nHistorical/Present", 
+       x = "Time Period", y = "Number of Left Lateral Plates") +
+  theme_minimal() +
+  scale_color_discrete(name = "Time Period")
+#ggsave("LPlateMayer.jpg", height = 15, width = 11, unit = "cm")
+#L Plate Rouge
+ggplot(data = rouge, aes(x = time_period, y = plate_l_total)) +
+  geom_boxplot(fill = "firebrick2") +
+  labs(title = "Rouge Lake Total Left Lateral Plate Count \nHistorical/Present", 
+       x = "Time Period", y = "Number of Left Lateral Plates") +
+  theme_minimal() +
+  scale_color_discrete(name = "Time Period")
+#ggsave("LPlateRouge.jpg", height = 15, width = 11, unit = "cm")
+
+
+
+
+#D1 Boulton
+ggplot(data = boulton, aes(x = time_period, y = dorsal_1.adj)) +
+  geom_boxplot(fill = "darkorchid1") +
+  labs(title = "Boulton Lake Dorsal Spine 1 Length \nHistorical/Present", 
+       x = "Time Period", y = "Dorsal Spine 1 Length Adjusted by Standard Length") +
+  theme_minimal() +
+  scale_color_discrete(name = "Time Period")
+#ggsave("D1Boulton.jpg", height = 15, width = 11, unit = "cm")
+#D1 Mayer
+ggplot(data = mayer, aes(x = time_period, y = dorsal_1.adj)) +
+  geom_boxplot(fill = "darkorange2") +
+  labs(title = "Mayer Lake Dorsal Spine 1 Length \nHistorical/Present", 
+       x = "Time Period", y = "Dorsal Spine 1 Length Adjusted by Standard Length") +
+  theme_minimal() +
+  scale_color_discrete(name = "Time Period")
+#ggsave("D1Mayer.jpg", height = 15, width = 11, unit = "cm")
+#D1 Drizzle
+ggplot(data = drizzle, aes(x = time_period, y = dorsal_1.adj)) +
+  geom_boxplot(fill = "chartreuse3") +
+  labs(title = "Drizzle Lake Dorsal Spine 1 Length \nHistorical/Present", 
+       x = "Time Period", y = "Dorsal Spine 1 Length Adjusted by Standard Length") +
+  theme_minimal() +
+  scale_color_discrete(name = "Time Period")
+#ggsave("D1Drizzle.jpg", height = 15, width = 11, unit = "cm")
+#D1 Rouge
+ggplot(data = rouge, aes(x = time_period, y = dorsal_1.adj)) +
+  geom_boxplot(fill = "firebrick2") +
+  labs(title = "Rouge Lake Dorsal Spine 1 Length \nHistorical/Present", 
+       x = "Time Period", y = "Dorsal Spine 1 Length Adjusted by Standard Length") +
+  theme_minimal() +
+  scale_color_discrete(name = "Time Period")
+#ggsave("D1Rouge.jpg", height = 15, width = 11, unit = "cm")
+
+#D2 Mayer
+ggplot(data = mayer, aes(x = time_period, y = dorsal_2.adj)) +
+  geom_boxplot(fill = "darkorange2") +
+  labs(title = "Mayer Lake Dorsal Spine 2 Length \nHistorical/Present", 
+       x = "Time Period", y = "Dorsal Spine 2 Length Adjusted by Standard Length") +
+  theme_minimal() +
+  scale_color_discrete(name = "Time Period")
+#ggsave("D2Mayer.jpg", height = 15, width = 11, unit = "cm")
+#D2 Rouge
+ggplot(data = rouge, aes(x = time_period, y = dorsal_2.adj)) +
+  geom_boxplot(fill = "firebrick2") +
+  labs(title = "Rouge Lake Dorsal Spine 2 Length \nHistorical/Present", 
+       x = "Time Period", y = "Dorsal Spine 2 Length Adjusted by Standard Length") +
+  theme_minimal() +
+  scale_color_discrete(name = "Time Period")
+#ggsave("D2Rouge.jpg", height = 15, width = 11, unit = "cm")
+
+
+
+#PS Drizzle
+ggplot(data = drizzle, aes(x = time_period, y = pelvic_spine.adj)) +
+  geom_boxplot(fill = "chartreuse3") +
+  labs(title = "Drizzle Lake Pelvic Spine Length \nHistorical/Present", 
+       x = "Time Period", y = "Pelvic Spine Length Adjusted by Standard Length") +
+  theme_minimal() +
+  scale_color_discrete(name = "Time Period")
+#ggsave("PSDrizzle.jpg", height = 15, width = 11, unit = "cm")
+#PS Mayer
+ggplot(data = mayer, aes(x = time_period, y = pelvic_spine.adj)) +
+  geom_boxplot(fill = "darkorange2") +
+  labs(title = "Mayer Lake Pelvic Spine Length \nHistorical/Present", 
+       x = "Time Period", y = "Pelvic Spine Length Adjusted by Standard Length") +
+  theme_minimal() +
+  scale_color_discrete(name = "Time Period")
+#ggsave("PSMayer.jpg", height = 15, width = 11, unit = "cm")
+#PS Rouge
+ggplot(data = rouge, aes(x = time_period, y = pelvic_spine.adj)) +
+  geom_boxplot(fill = "firebrick2") +
+  labs(title = "Rouge Lake Pelvic Spine Length \nHistorical/Present", 
+       x = "Time Period", y = "Pelvic Spine Length Adjusted by Standard Length") +
+  theme_minimal() +
+  scale_color_discrete(name = "Time Period")
+#ggsave("PSRouge.jpg", height = 15, width = 11, unit = "cm")
+
+
+#~~~~~~~~~
+
+
+#Ascending Process Presence Boulton
+ggplot(data = boulton, aes(x =  time_period, fill = ap_pa)) +
+  geom_bar(stat = "count", position = "fill") +
+  labs(title = "Boulton Lake Ascending Process \nPresence Historical/Present", 
+       x = "Time Period", y = "Proportion of Fish") +
+  theme_minimal() +
+  scale_fill_manual(name = "Presence", values = c("indianred", "olivedrab4"))
+#ggsave("APPABoulton.jpg", height = 15, width = 11, unit = "cm")
+#Ascending Process Presence Serendipity
+ggplot(data = serendipity, aes(x =  time_period, fill = ap_pa)) +
+  geom_bar(stat = "count", position = "fill") +
+  labs(title = "Serendipity Lake Ascending Process \nPresence Historical/Present", 
+       x = "Time Period", y = "Proportion of Fish") +
+  theme_minimal() +
+  scale_fill_manual(name = "Presence", values = c("indianred", "olivedrab4"))
+#ggsave("APPASerendipity.jpg", height = 15, width = 11, unit = "cm")
+
+
+
+#Dorsal Spine 1 Presence Rouge
+ggplot(data = rouge, aes(x =  time_period, fill = dorsal_1_pa)) +
+  geom_bar(stat = "count", position = "fill") +
+  labs(title = "Rouge Lake Dorsal Spine 1 \nPresence Historical/Present", 
+       x = "Time Period", y = "Proportion of Fish") +
+  theme_minimal() +
+  scale_fill_manual(name = "Presence", values = c("indianred","olivedrab4"))
+#ggsave("D1PARouge.jpg", height = 15, width = 11, unit = "cm")
+
+#Dorsal Spine 2 Presence Boulton
+ggplot(data = boulton, aes(x =  time_period, fill = dorsal_2_pa)) +
+  geom_bar(stat = "count", position = "fill") +
+  labs(title = "Boulton Lake Dorsal Spine 2 \nPresence Historical/Present", 
+       x = "Time Period", y = "Proportion of Fish") +
+  theme_minimal() +
+  scale_fill_manual(name = "Presence", values = c("indianred", "olivedrab4"))
+#ggsave("D2PABoulton.jpg", height = 15, width = 11, unit = "cm")
+ 
+#Dorsal Spine 3 Presence Rouge
+ggplot(data = rouge, aes(x =  time_period, fill = dorsal_3_pa)) +
+  geom_bar(stat = "count", position = "fill") +
+  labs(title = "Rouge Lake Dorsal Spine 3 \nPresence Historical/Present", 
+       x = "Time Period", y = "Proportion of Fish") +
+  theme_minimal() +
+  scale_fill_manual(name = "Presence", values = c("indianred", "olivedrab4"))
+#ggsave("D3PARouge.jpg", height = 15, width = 11, unit = "cm")
+
+
+```
+
+
+Need to figure out how to do t test for P/A
+```{r Second Stats, eval=FALSE, include=FALSE}
+#Oh boy this is about to be a lot of t tests
+#On the adjusted values
+
+#SL Boulton (sig increase)
+t.test(sl ~ time_period, data = boulton)
+#SL Drizzle
+t.test(sl ~ time_period, data = drizzle)
+#SL Mayer (sig increase)
+t.test(sl ~ time_period, data = mayer)
+#SL Serendipity
+t.test(sl ~ time_period, data = serendipity)
+#SL Rouge (sig decrease)
+t.test(sl ~ time_period, data = rouge)
+
+
+#Left Plates Boulton (Almost sig increase?)
+t.test(plate_l_total ~ time_period, data = boulton)
+#Left Plates Drizzle
+t.test(plate_l_total ~ time_period, data = drizzle)
+#Left Plates Mayer (SIG INCREASE)
+t.test(plate_l_total ~ time_period, data = mayer)
+#Left Plates Serendipity
+t.test(plate_l_total ~ time_period, data = serendipity)
+#Left Plates Rouge (SIG INCREASE)
+t.test(plate_l_total ~ time_period, data = rouge)
+
+
+#Right Plates Boulton (SIG increase)
+t.test(plate_r_total ~ time_period, data = boulton)
+#Right Plates Drizzle
+t.test(plate_r_total ~ time_period, data = drizzle)
+#Right Plates Mayer (SIG increase)
+t.test(plate_r_total ~ time_period, data = mayer)
+#Right Plates Serendipity
+t.test(plate_r_total ~ time_period, data = serendipity)
+#Right Plates Rouge (Huge sig increase)
+t.test(plate_r_total ~ time_period, data = rouge)
+
+
+#Total Plates Boulton (SIG increase)
+t.test(plate_lr_total ~ time_period, data = boulton)
+#Total Plates Drizzle
+t.test(plate_lr_total ~ time_period, data = drizzle)
+#Total Plates Mayer (SIG increase)
+t.test(plate_lr_total ~ time_period, data = mayer)
+#Total Plates Serendipity
+t.test(plate_lr_total ~ time_period, data = serendipity)
+#Total Plates Rouge  (SIG increase)
+t.test(plate_lr_total ~ time_period, data = rouge)
+
+
+#Body Depth Boulton (SIG increase)
+t.test(body_depth.adj ~ time_period, data = boulton)
+#Body Depth Drizzle (Weirdly enough sig increase)
+t.test(body_depth.adj ~ time_period, data = drizzle)
+#Body Depth Mayer
+t.test(body_depth.adj ~ time_period, data = mayer)
+#Body Depth Serendipity
+t.test(body_depth.adj ~ time_period, data = serendipity)
+#Body Depth Rouge (Almost sig increase)
+t.test(body_depth.adj ~ time_period, data = rouge)
+
+
+#AP Length Boulton
+t.test(ap_length.adj ~ time_period, data = boulton)
+#AP Length Drizzle
+t.test(ap_length.adj ~ time_period, data = drizzle)
+#AP Length Mayer
+t.test(ap_length.adj ~ time_period, data = mayer)
+#AP Length Serendipity (Almost sig decrease)
+t.test(ap_length.adj ~ time_period, data = serendipity)
+#AP Length Rouge 
+t.test(ap_length.adj ~ time_period, data = rouge)
+
+
+#AP Width Boulton
+t.test(ap_width.adj ~ time_period, data = boulton)
+#AP Width Drizzle (Almost sig decrease)
+t.test(ap_width.adj ~ time_period, data = drizzle)
+#AP Width Mayer
+t.test(ap_width.adj ~ time_period, data = mayer)
+#AP Width Serendipity (0.09 mehhhh increase)
+t.test(ap_width.adj ~ time_period, data = serendipity)
+#AP Width Rouge (Almost sig decrease)
+t.test(ap_width.adj ~ time_period, data = rouge)
+
+
+#Jaw Length Boulton
+t.test(jaw_length.adj ~ time_period, data = boulton)
+#Jaw Length Drizzle
+t.test(jaw_length.adj ~ time_period, data = drizzle)
+#Jaw Length Mayer (SIG increase)
+t.test(jaw_length.adj ~ time_period, data = mayer)
+#Jaw Length Serendipity (Sig decrease)
+t.test(jaw_length.adj ~ time_period, data = serendipity)
+#Jaw Length Rouge 
+t.test(jaw_length.adj ~ time_period, data = rouge)
+
+
+#Pelvic Plate Length Boulton
+t.test(ppl.adj ~ time_period, data = boulton)
+#Pelvic Plate Length Drizzle
+t.test(ppl.adj ~ time_period, data = drizzle)
+#Pelvic Plate Length Mayer
+t.test(ppl.adj ~ time_period, data = mayer)
+#Pelvic Plate Length Serendipity  NOPE
+#t.test(ppl.adj ~ time_period, data = serendipity)
+#Pelvic Plate Length Rouge 
+t.test(ppl.adj ~ time_period, data = rouge)
+
+
+#Pelvic Plate Width Boulton (Sig increase)
+t.test(ppw.adj ~ time_period, data = boulton)
+#Pelvic Plate Width Drizzle
+t.test(ppw.adj ~ time_period, data = drizzle)
+#Pelvic Plate Width Mayer (SIG decrease)
+t.test(ppw.adj ~ time_period, data = mayer)
+#Pelvic Plate Width Serendipity NOPE
+#t.test(ppw.adj ~ time_period, data = serendipity)
+#Pelvic Plate Width Rouge (Almost sig decrease)
+t.test(ppw.adj ~ time_period, data = rouge)
+
+
+#Dorsal Spine 1 Length Boulton (Sig increase)
+t.test(dorsal_1.adj ~ time_period, data = boulton)
+#Dorsal Spine 1 Length Drizzle (Sig increase)
+t.test(dorsal_1.adj ~ time_period, data = drizzle)
+#Dorsal Spine 1 Length Mayer (SIG increase)
+t.test(dorsal_1.adj ~ time_period, data = mayer)
+#Dorsal Spine 1 Length Serendipity
+t.test(dorsal_1.adj ~ time_period, data = serendipity)
+#Dorsal Spine 1 Length Rouge (SIG increase)
+t.test(dorsal_1.adj ~ time_period, data = rouge)
+
+
+#Dorsal Spine 2 Length Boulton (Almost sig increase)
+t.test(dorsal_2.adj ~ time_period, data = boulton)
+#Dorsal Spine 2 Length Drizzle (Almost sig increase)
+t.test(dorsal_2.adj ~ time_period, data = drizzle)
+#Dorsal Spine 2 Length Mayer (Sig increase)
+t.test(dorsal_2.adj ~ time_period, data = mayer)
+#Dorsal Spine 2 Length Serendipity
+t.test(dorsal_2.adj ~ time_period, data = serendipity)
+#Dorsal Spine 2 Length Rouge (Sig increase)
+t.test(dorsal_2.adj ~ time_period, data = rouge)
+
+
+#Pelvic Spine Length Boulton
+t.test(pelvic_spine.adj ~ time_period, data = boulton)
+#Pelvic Spine Length Drizzle (Sig increase)
+t.test(pelvic_spine.adj ~ time_period, data = drizzle)
+#Pelvic Spine Length Mayer (SIG increase)
+t.test(pelvic_spine.adj ~ time_period, data = mayer)
+#Pelvic Spine Length Serendipity NOPE
+t.test(pelvic_spine.adj ~ time_period, data = serendipity)
+#Pelvic Spine Length Rouge (SIG increase)
+t.test(pelvic_spine.adj ~ time_period, data = rouge)
+
+
+#Eye Diameter Boulton (Sig decrease)
+t.test(eye_diameter.adj ~ time_period, data = boulton)
+#Eye Diameter Drizzle
+t.test(eye_diameter.adj ~ time_period, data = drizzle)
+#Eye Diameter Mayer (Sig decrease)
+t.test(eye_diameter.adj ~ time_period, data = mayer)
+#Eye Diameter Serendipity (Sig increase)
+t.test(eye_diameter.adj ~ time_period, data = serendipity)
+#Eye Diameter Rouge WHOOPS
+#t.test(eye_diameter.adj ~ time_period, data = rouge)
+
+
+
+#Still need to do T test for P/A of Parasites, AP, D1, D2, PP, PS, D3
+```
+
