@@ -6,6 +6,10 @@ output: html_document
 ---
 
 ```{r Setup}
+#Clear working directory
+rm(list=ls())
+
+pacman::p_load(tidyverse, here, janitor, ggplot2, ggsignif, ggpubr)
 
 library(tidyverse)
 library(here)
@@ -18,6 +22,8 @@ library(ggpubr)
 
 ```{r Read-In}
 data1 <- read_csv("C:/Users/zoemo/OneDrive/Documents/GitHub/Threatened-Stickleback/Data/ZM Data Sheet Cleaned Reduced.csv")
+
+data1 <- read_csv("../Data/ZM Data Sheet Cleaned Reduced.csv")
 
 
 ```
@@ -121,6 +127,9 @@ rouge <- dataclean %>%
 #Make lists for for loops
 
 numeric_traits <- list(sl, body_depth.adj, ap_length.adj, ap_width.adj, jaw_length.adj, ppl.adj, ppw.adj, dorsal_1.adj, dorsal_2.adj, pelvic_spine.adj, eye_diameter.adj)
+
+numeric_traits <- list("sl", "body_depth.adj", "ap_length.adj", "ap_width.adj", "jaw_length.adj", "ppl.adj", "ppw.adj", "dorsal_1.adj", "dorsal_2.adj", "pelvic_spine.adj", "eye_diameter.adj")
+numeric_traits_2 <- c("sl", "body_depth.adj", "ap_length.adj", "ap_width.adj", "jaw_length.adj", "ppl.adj", "ppw.adj", "dorsal_1.adj", "dorsal_2.adj", "pelvic_spine.adj", "eye_diameter.adj")
 
 countable_traits <- list(ap_pa, pp_pa, dorsal_1_pa, dorsal_2_pa, dorsal_3_pa, pelvic_spine_pa)
 
