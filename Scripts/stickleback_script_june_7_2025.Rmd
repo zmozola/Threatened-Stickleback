@@ -5,8 +5,177 @@ date: "2025-06-07"
 output: html_document
 ---
 
-```{r setup}
+```{r Setup}
 
+library(tidyverse)
+library(here)
+library(janitor)
+library(ggplot2)
+library(ggsignif)
+library(ggpubr)
+
+```
+
+```{r Read-In}
+data1 <- read_csv("C:/Users/zoemo/OneDrive/Documents/GitHub/Threatened-Stickleback/Data/ZM Data Sheet Cleaned Reduced.csv")
+
+
+```
+
+
+```{r Cleaning}
+# Set Current dataset 
+data <- data1
+
+
+#Encleanenate
+dataclean <- data %>%
+  clean_names() %>%
+  filter(!is.na(fish_id)) %>%
+  #Make that shit categorical
+  mutate(time_period = ifelse(year >= 2000, "Present", "Historical")) %>%
+  #Make tag for unarmoured/giant
+  mutate(type = ifelse(body_of_water %in% c("Drizzle Lake", "Mayer Lake"), "Giant", "Unarmoured")) %>%
+  #Make Plate Arrangement a string
+  mutate(plate_l_combined = as.factor(plate_l_combined)) %>%
+  mutate(plate_r_combined = as.factor(plate_r_combined)) %>%
+  mutate(body_of_water = factor(body_of_water, levels = c("Mayer Lake", "Drizzle Lake",
+                                            "Serendipity Lake", "Boulton Lake", 
+                                            "Rouge Lake")))
+
+```
+
+
+``` {r Allometric Adjustments}
+#ALLOMETRIC ADJUSTMENTS
+data.log <- dataclean %>%
+  mutate_at(vars(sl, body_depth, ap_length_corrected, ap_width_corrected, jaw_length, ppl, ppw, dorsal_1, dorsal_2, pelvic_spine, eye_diameter),
+                  log10)
+
+# size.coef is a function to get coefficient for #size adjustment #trait - name of trait col to get #slope coefficient
+size.coef<-function(trait){
+  ancova=lm(data=data.log, trait~sl+body_of_water)
+  coef=ancova$coefficients[2]
+  coef
+}
+
+#the following line produces slope coefficient. #Repeat for each trait.
+BD.coef<-size.coef(data.log$body_depth)
+APL.coef<-size.coef(data.log$ap_length_corrected)
+APW.coef<-size.coef(data.log$ap_width_corrected)
+JL.coef<-size.coef(data.log$jaw_length)
+PPL.coef<-size.coef(data.log$ppl)
+PPW.coef<-size.coef(data.log$ppw)
+D1.coef<-size.coef(data.log$dorsal_1) #log of 0 is infinity
+D2.coef<-size.coef(data.log$dorsal_2)
+#D3.coef<-size.coef(data.log$dorsal_3)
+PS.coef<-size.coef(data.log$pelvic_spine)
+ED.coef<-size.coef(data.log$eye_diameter)
+
+# following makes a matrix 1 x k matrix of slopes for each trait
+Coef<-matrix(c(BD.coef, APL.coef, APW.coef,JL.coef, PPL.coef, PPW.coef, D1.coef, D2.coef, PS.coef, ED.coef),dimnames = list(c("body_depth", "ap_length", "ap_width", "jaw_length", "ppl", "ppw", "dorsal_1", "dorsal_2", "pelvic", "eye")))
+
+
+# Adjusts trait value using formula: Xadj=Xi*(mean(sl)/SLi)^b
+dataclean$body_depth.adj<-dataclean$body_depth*(mean(dataclean$sl)/dataclean$sl)^Coef["body_depth",]
+dataclean$ap_length.adj<-dataclean$ap_length_corrected*(mean(dataclean$sl)/dataclean$sl)^Coef["ap_length",]
+dataclean$ap_width.adj<-dataclean$ap_width_corrected*(mean(dataclean$sl)/dataclean$sl)^Coef["ap_width",]
+dataclean$jaw_length.adj<-dataclean$jaw_length*(mean(dataclean$sl)/dataclean$sl)^Coef["jaw_length",]
+dataclean$ppl.adj<-dataclean$ppl*(mean(dataclean$sl)/dataclean$sl)^Coef["ppl",]
+dataclean$ppw.adj<-dataclean$ppw*(mean(dataclean$sl)/dataclean$sl)^Coef["ppw",]
+dataclean$dorsal_1.adj<-dataclean$dorsal_1*(mean(dataclean$sl)/dataclean$sl)^Coef["dorsal_1",]
+dataclean$dorsal_2.adj<-dataclean$dorsal_2*(mean(dataclean$sl)/dataclean$sl)^Coef["dorsal_2",]
+dataclean$pelvic_spine.adj<-dataclean$pelvic_spine*(mean(dataclean$sl)/dataclean$sl)^Coef["pelvic",]
+dataclean$eye_diameter.adj<-dataclean$eye_diameter*(mean(dataclean$sl)/dataclean$sl)^Coef["eye",]
+
+
+
+
+
+#Make Boulton
+boulton <- dataclean %>%
+  filter(body_of_water=="Boulton Lake")
+  
+
+#Make Drizzle
+drizzle <- dataclean %>%
+  filter(body_of_water=="Drizzle Lake")
+
+#Make Mayer
+mayer <- dataclean %>%
+  filter(body_of_water=="Mayer Lake")
+
+#Make Serendipity
+serendipity <- dataclean %>%
+  filter(body_of_water=="Serendipity Lake")
+
+#Make Rouge
+rouge <- dataclean %>%
+  filter(body_of_water=="Rouge Lake")
+
+
+```
+
+```{r Formula Setup}
+
+#Make lists for for loops
+
+numeric_traits <- list(sl, body_depth.adj, ap_length.adj, ap_width.adj, jaw_length.adj, ppl.adj, ppw.adj, dorsal_1.adj, dorsal_2.adj, pelvic_spine.adj, eye_diameter.adj)
+
+countable_traits <- list(ap_pa, pp_pa, dorsal_1_pa, dorsal_2_pa, dorsal_3_pa, pelvic_spine_pa)
+
+lakes <- list(drizzle, mayer, rouge, boulton, serendipity)
+```
+
+
+
+
+
+
+
+
+
+NOT SET FOR MY DATA YET
+```{r T test loop + pool check}
+# Empty list to store models
+Q1.models <- list()
+
+# Loop through traits and fit GLMs
+for (trait in traits.cont) {
+  formula <- as.formula(paste(trait, "~ Sex + Drought"))
+  Q1.models[[trait]] <- glm(formula, family = gaussian(link = "identity"), data = dat1)
+}
+
+for (trait in traits.cont) {
+  cat("\n### Summary for:", trait, "###\n")
+  print(summary(Q1.models[[trait]]))
+}
+
+
+###
+
+
+dat_sub<- data %>%
+  filter(year %in% c(2007,2012,2013))
+
+dat_sub$year <- factor(dat_sub$year, levels = c("2007", "2012", "2013"))
+dat_sub$LP_No <- as.numeric(dat_sub$LP_No)
+mod.LP <- glm(LP_No ~ Sex + year, family = poisson, data = dat_sub)
+summary(mod.LP)
+
+planned_contrasts <- list(
+  "2007 vs 2012" = c(-1, 1, 0),
+  "2012 vs 2013" = c(0, -1, 1),
+  "2007 vs 2013" = c(-1, 0, 1)
+)
+# Perform emmeans for the 'pop' variable
+emm <- emmeans(mod.LP, ~ year)
+
+# Run the planned contrasts
+planned_results <- contrast(emm, method = planned_contrasts)
+
+# View the results
+summary(planned_results)
 
 ```
 
