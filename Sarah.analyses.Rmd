@@ -1,0 +1,222 @@
+---
+title: "Sarah_analyses"
+output: html_document
+date: "2025-07-14"
+---
+
+```{r Setup}
+#Clear working directory
+rm(list=ls())
+
+pacman::p_load(ggplot2, dplyr, gganimate)
+
+# install.packages("remotes")
+# remotes::install_github("thomasp85/gganimate")
+# library(gganimate)
+```
+
+```{r Read-In}
+dat <- read.csv("./Data/data.clean.csv")
+
+#Delete unecessary columns
+data.frame(ColNum = seq_along(dat), Name = names(dat))
+dat <- dat[, -c(1,2,3,7,8,9,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,
+                         31,32,33,34,35,36,37,38,39,40,41, 45,46,47,48,49,50,51,52,53,55,56,57,58,59,60,
+                         61,62,63,64,65)]
+
+#Make all NAs 0
+dat <- dat %>%
+  mutate(across(c("ap_length.adj", "ap_width.adj", "ppl.adj", "ppw.adj", 
+               "dorsal_1.adj", "dorsal_2.adj", "pelvic_spine.adj"), ~replace(., is.na(.), 0)))
+
+dat$year <- as.factor(dat$year)
+dat$sex <- as.factor(dat$sex)
+dat$body_of_water <- as.factor(dat$body_of_water)
+```
+
+```{r}
+dat <- dat %>%
+  mutate(Location = recode(body_of_water,
+                           "Boulton Lake" = "Boulton",
+                           "Rouge Lake" = "Rouge",
+                           "Mayer Lake" = "Mayer",
+                           "Drizzle Lake" = "Drizzle",
+                           "Serendipity Lake" = "Serendipity"))
+
+dat <- dat %>%
+  mutate(timepoint = case_when(
+    Location == "Boulton" & year == 1979 ~ "Historical 1",
+    Location == "Boulton" & year == 1980 ~ "Historical 2",
+    Location == "Boulton" & year == 2022 ~ "Present 3",
+    Location == "Boulton" & year == 2024 ~ "Present 4",
+    Location == "Drizzle" & year == 1979 ~ "Historical 1",
+    Location == "Drizzle" & year == 1982 ~ "Historical 2",
+    Location == "Drizzle" & year == 2022 ~ "Present 3",
+    Location == "Drizzle" & year == 2024 ~ "Present 4",
+    Location == "Mayer" & year == 1975 ~ "Historical 1",
+    Location == "Mayer" & year == 1982 ~ "Historical 2",
+    Location == "Mayer" & year == 2022 ~ "Present 3",
+    Location == "Mayer" & year == 2024 ~ "Present 4",
+    Location == "Rouge" & year == 1979 ~ "Historical 1",
+    Location == "Rouge" & year == 1981 ~ "Historical 2",
+    Location == "Rouge" & year == 2018 ~ "Present 3",
+    Location == "Rouge" & year == 2022 ~ "Present 4",
+    Location == "Serendipity" & year == 1979 ~ "Historical 1",
+    Location == "Serendipity" & year == 1986 ~ "Historical 2",
+    Location == "Serendipity" & year == 2014 ~ "Present 3",
+    Location == "Serendipity" & year == 2015 ~ "Present 4",
+    TRUE ~ NA_character_  # everything else gets NA
+  ))
+```
+
+
+#PCA of defensive traits
+```{r}
+trait_def <- c("ap_length.adj", "ap_width.adj", "ppl.adj", "ppw.adj", 
+               "dorsal_1.adj", "dorsal_2.adj", "pelvic_spine.adj", "plate_lr_total")  
+
+pca.def <- prcomp(dat[, trait_def], scale. = TRUE)  
+pc_scores.for <- as.data.frame(pca.def$x)
+summary(pca.def)
+
+
+loadings <- pca.def$rotation[, 1:2] 
+mult <- min(
+  (max(pc_scores.for$PC2) - min(pc_scores.for$PC2)) / (max(loadings[,2]) - min(loadings[,2])),
+  (max(pc_scores.for$PC1) - min(pc_scores.for$PC1)) / (max(loadings[,1]) - min(loadings[,1]))
+)
+
+loadings_scaled <- loadings * mult * 0.7  # 0.7 is a scaling factor to adjust arrow length
+library(tibble)
+loadings_df <- as_tibble(loadings_scaled, rownames = "trait")
+library(ggplot2)
+
+ggplot(pc_scores.for, aes(x = PC1, y = PC2)) +
+  geom_point(alpha = 0.6) +  # sample points
+  geom_segment(data = loadings_df,
+               aes(x = 0, y = 0, xend = PC1, yend = PC2),
+               arrow = arrow(length = unit(0.3, "cm")),
+               color = "red", size = 1) +  # trait vectors
+  geom_text(data = loadings_df,
+            aes(x = PC1 * 1.1, y = PC2 * 1.1, label = trait),
+            color = "red", size = 4) +  # trait labels slightly beyond arrow tips
+  theme_minimal() +
+  labs(title = "PCA with Trait Vectors", x = "PC1", y = "PC2")
+
+
+```
+#Add categorical data 
+```{r}
+pc_scores.for$Location <- dat$Location
+pc_scores.for$sex <- dat$sex
+pc_scores.for$year <- dat$year
+pc_scores.for$Fish_ID <- dat$fish_id
+pc_scores.for$timepoint <- dat$timepoint
+pc_scores.for$time_period <- dat$time_period
+```
+
+```{r}
+centroids.for <- pc_scores.for %>%
+  group_by(Location, time_period) %>%
+  summarize(across(starts_with("PC"), mean), .groups = "drop")
+```
+
+
+```{r}
+# Subset centroids for the pairs of interest
+pairs_of_interest <- centroids.for %>%
+  filter(
+    (Location == "Mayer" & time_period =="Historical") |
+    (Location == "Mayer" & time_period =="Present") |
+    (Location == "Boulton"  & time_period =="Historical") |
+    (Location == "Boulton"  & time_period =="Present")  |
+    (Location == "Drizzle"& time_period =="Historical")  |
+    (Location == "Drizzle"& time_period =="Present")  |
+    (Location == "Rouge" & time_period =="Historical")   |
+    (Location == "Rouge" & time_period =="Present")   |
+    (Location == "Serendipity" & time_period =="Historical")|
+    (Location == "Serendipity" & time_period =="Present")  
+    )
+  
+```
+
+
+```{r}
+plot <- ggplot(pc_scores.for, aes(x = PC1, y = PC2))  +
+        geom_point(aes(color = Group, shape = time_period), alpha = 1, size = 1.5) +
+        geom_point(data = centroids.for, aes(x = PC1, y = PC2,
+                                               colour = Group, size = 4, shape = time_period)) +
+  stat_ellipse(aes(color = Group, group = interaction(Location, time_period)), 
+               type = "norm", level = 0.68, linewidth = 0.8, linetype = "solid") +
+          scale_color_manual(values = c(
+         "Rouge_Historical" = "#fb9a99",     
+          "Rouge_Present"  = "#e31a1c",      
+          "Serendipity_Historical" = "#fdbf6f",
+          "Serendipity_Present"  = "#ff7f00",
+          "Drizzle_Historical" = "#b2df8a",
+          "Drizzle_Present"  = "#33a02c",
+          "Mayer_Historical"   = "#a6cee3",
+          "Mayer_Present"    = "#1f78b4",
+          "Boulton_Historical" = "#cab2d6",
+          "Boulton_Present"  = "#6a3d9a"
+          )) + 
+           theme_minimal() +
+        
+          labs(x = "PC1 74%", y = "PC2 14%", color = "", title = "Timepoint: {closest_state}") +
+          transition_states(time_period, transition_length = 2, state_length = 1) +
+          ease_aes('linear')
+
+anim.plot <- animate(plot, nframes = 100, fps = 10)
+
+
+#anim <- animate(p, nframes = 100, fps = 10, width = 800, height = 600)
+
+# Save as GIF
+anim_save("pca_animation.gif", animation = anim.plot)
+```
+
+```{r}
+pc_scores.for$Group <- interaction(pc_scores.for$Location, pc_scores.for$time_period, sep = "_")
+centroids.for$Group <- interaction(centroids.for$Location, centroids.for$time_period, sep = "_")
+
+
+defensive.plot<- ggplot(pc_scores.for, aes(x = PC1, y = PC2))  +
+                geom_point(aes(color = Group, shape = time_period), alpha = 1, size = 1.5) +
+                geom_point(data = centroids.for, aes(x = PC1, y = PC2,
+                                                       colour = Group, size = 4, shape = time_period))+ 
+          stat_ellipse(aes(color = Group, group = interaction(Location, time_period)), 
+                       type = "norm", level = 0.68, linewidth = 0.8, linetype = "solid") +
+                  scale_color_manual(values = c(
+                 "Rouge_Historical" = "#fb9a99",     
+                  "Rouge_Present"  = "#e31a1c",      
+                  "Serendipity_Historical" = "#fdbf6f",
+                  "Serendipity_Present"  = "#ff7f00",
+                  "Drizzle_Historical" = "#b2df8a",
+                  "Drizzle_Present"  = "#33a02c",
+                  "Mayer_Historical"   = "#a6cee3",
+                  "Mayer_Present"    = "#1f78b4",
+                  "Boulton_Historical" = "#cab2d6",
+                  "Boulton_Present"  = "#6a3d9a"
+                  )) + 
+                   theme_minimal() +
+                  labs(x = "PC1 74%", y = "PC2 14%", color = "") 
+
+ggsave("defence.pdf", plot = defensive.plot, width = 10, height = 6)
+```
+
+```{r}
+ggplot(dat, aes(x = body_depth.adj, y = jaw_length.adj, color = Location)) +
+          geom_point(size = 2, alpha = 0.8) +
+          scale_color_manual(values = c(
+          "Rouge" = "#d73027",
+          "Serendipity"   = "#d95f02",
+          "Drizzle" = "#91bfdb",
+          "Mayer" = "#4575b4",
+          "Boulton" = "#fee090"
+          )) + 
+           theme_minimal() +
+          labs(x = "body_depth", y = "jaw_length", color = "") +
+  facet_wrap(~ time_period) 
+
+```
+
