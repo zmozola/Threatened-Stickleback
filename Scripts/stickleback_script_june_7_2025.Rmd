@@ -11,20 +11,12 @@ rm(list=ls())
 
 pacman::p_load(tidyverse, here, janitor, ggplot2, ggsignif, ggpubr)
 
-library(tidyverse)
-library(here)
-library(janitor)
-library(ggplot2)
-library(ggsignif)
-library(ggpubr)
-
 ```
 
 ```{r Read-In}
 data1 <- read_csv("C:/Users/zoemo/OneDrive/Documents/GitHub/Threatened-Stickleback/Data/ZM Data Sheet Cleaned Reduced.csv")
 
 data1 <- read_csv("../Data/ZM Data Sheet Cleaned Reduced.csv")
-
 
 ```
 
@@ -95,9 +87,6 @@ dataclean$pelvic_spine.adj<-dataclean$pelvic_spine*(mean(dataclean$sl)/dataclean
 dataclean$eye_diameter.adj<-dataclean$eye_diameter*(mean(dataclean$sl)/dataclean$sl)^Coef["eye",]
 
 
-
-
-
 #Make Boulton
 boulton <- dataclean %>%
   filter(body_of_water=="Boulton Lake")
@@ -119,8 +108,37 @@ serendipity <- dataclean %>%
 rouge <- dataclean %>%
   filter(body_of_water=="Rouge Lake")
 
-
 ```
+
+#Export clean data
+```{r}
+write.csv(dataclean, "../Data/data.clean.csv")
+```
+
+
+#PCA of defensive traits
+```{r}
+trait_def <- c("ap_length.adj", "ap_width.adj", "ppl.adj", "ppw.adj", 
+               "dorsal_1.adj", "dorsal_2.adj", "pelvic_spine.adj", "plate_lr_total")  
+
+pca.for <- prcomp(dataclean[, trait_def], scale. = TRUE)  
+pc_scores.for <- as.data.frame(pca.for$x)
+summary(pca.for)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 ```{r Formula Setup}
 
