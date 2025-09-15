@@ -6,11 +6,16 @@ output: html_document
 ---
 
 ```{r Setup}
-#Clear working directory
+#Set Working Directory IN CONSOLE
+#setwd("C:/Users/zoemo/OneDrive/Documents/GitHub/Threatened-Stickleback")
+
+
+#Remove list = list() ?????
 rm(list=ls())
 
 pacman::p_load(tidyverse, here, janitor, ggplot2, ggsignif, ggpubr)
 
+#Old way of doing it maybe not necessary?
 library(tidyverse)
 library(here)
 library(janitor)
@@ -18,12 +23,16 @@ library(ggplot2)
 library(ggsignif)
 library(ggpubr)
 
+
+
 ```
 
 ```{r Read-In}
-data1 <- read_csv("C:/Users/zoemo/OneDrive/Documents/GitHub/Threatened-Stickleback/Data/ZM Data Sheet Cleaned Reduced.csv")
+#data1 <- read_csv("C:/Users/zoemo/OneDrive/Documents/GitHub/Threatened-Stickleback/Data/ZM Data Sheet Cleaned Reduced.csv")
 
-data1 <- read_csv("../Data/ZM Data Sheet Cleaned Reduced.csv")
+#data1 <- read_csv("../Data/ZM Data Sheet Cleaned Reduced.csv")
+
+data2 <- read_csv(here("Data", "ZM Data Sheet Extra Measurements.csv"))
 
 
 ```
@@ -31,14 +40,14 @@ data1 <- read_csv("../Data/ZM Data Sheet Cleaned Reduced.csv")
 
 ```{r Cleaning}
 # Set Current dataset 
-data <- data1
+data <- data2
 
 
 #Encleanenate
 dataclean <- data %>%
   clean_names() %>%
   filter(!is.na(fish_id)) %>%
-  #Make that shit categorical
+  #Make tag for time period
   mutate(time_period = ifelse(year >= 2000, "Present", "Historical")) %>%
   #Make tag for unarmoured/giant
   mutate(type = ifelse(body_of_water %in% c("Drizzle Lake", "Mayer Lake"), "Giant", "Unarmoured")) %>%
@@ -74,12 +83,12 @@ PPL.coef<-size.coef(data.log$ppl)
 PPW.coef<-size.coef(data.log$ppw)
 D1.coef<-size.coef(data.log$dorsal_1) #log of 0 is infinity
 D2.coef<-size.coef(data.log$dorsal_2)
-#D3.coef<-size.coef(data.log$dorsal_3)
+D3.coef<-size.coef(data.log$dorsal_3)
 PS.coef<-size.coef(data.log$pelvic_spine)
 ED.coef<-size.coef(data.log$eye_diameter)
 
 # following makes a matrix 1 x k matrix of slopes for each trait
-Coef<-matrix(c(BD.coef, APL.coef, APW.coef,JL.coef, PPL.coef, PPW.coef, D1.coef, D2.coef, PS.coef, ED.coef),dimnames = list(c("body_depth", "ap_length", "ap_width", "jaw_length", "ppl", "ppw", "dorsal_1", "dorsal_2", "pelvic", "eye")))
+Coef<-matrix(c(BD.coef, APL.coef, APW.coef,JL.coef, PPL.coef, PPW.coef, D1.coef, D2.coef, D3.coef, PS.coef, ED.coef),dimnames = list(c("body_depth", "ap_length", "ap_width", "jaw_length", "ppl", "ppw", "dorsal_1", "dorsal_2", "dorsal_3", "pelvic", "eye")))
 
 
 # Adjusts trait value using formula: Xadj=Xi*(mean(sl)/SLi)^b
@@ -91,6 +100,7 @@ dataclean$ppl.adj<-dataclean$ppl*(mean(dataclean$sl)/dataclean$sl)^Coef["ppl",]
 dataclean$ppw.adj<-dataclean$ppw*(mean(dataclean$sl)/dataclean$sl)^Coef["ppw",]
 dataclean$dorsal_1.adj<-dataclean$dorsal_1*(mean(dataclean$sl)/dataclean$sl)^Coef["dorsal_1",]
 dataclean$dorsal_2.adj<-dataclean$dorsal_2*(mean(dataclean$sl)/dataclean$sl)^Coef["dorsal_2",]
+dataclean$dorsal_3.adj<-dataclean$dorsal_3*(mean(dataclean$sl)/dataclean$sl)^Coef["dorsal_3",]
 dataclean$pelvic_spine.adj<-dataclean$pelvic_spine*(mean(dataclean$sl)/dataclean$sl)^Coef["pelvic",]
 dataclean$eye_diameter.adj<-dataclean$eye_diameter*(mean(dataclean$sl)/dataclean$sl)^Coef["eye",]
 
@@ -126,14 +136,21 @@ rouge <- dataclean %>%
 
 #Make lists for for loops
 
-numeric_traits <- list(sl, body_depth.adj, ap_length.adj, ap_width.adj, jaw_length.adj, ppl.adj, ppw.adj, dorsal_1.adj, dorsal_2.adj, pelvic_spine.adj, eye_diameter.adj)
+numeric_traits <- list(sl, body_depth.adj, ap_length.adj, ap_width.adj, jaw_length.adj, ppl.adj, ppw.adj, dorsal_1.adj, dorsal_2.adj, dorsal_3.adj, pelvic_spine.adj, eye_diameter.adj)
 
-numeric_traits <- list("sl", "body_depth.adj", "ap_length.adj", "ap_width.adj", "jaw_length.adj", "ppl.adj", "ppw.adj", "dorsal_1.adj", "dorsal_2.adj", "pelvic_spine.adj", "eye_diameter.adj")
-numeric_traits_2 <- c("sl", "body_depth.adj", "ap_length.adj", "ap_width.adj", "jaw_length.adj", "ppl.adj", "ppw.adj", "dorsal_1.adj", "dorsal_2.adj", "pelvic_spine.adj", "eye_diameter.adj")
+numeric_traits <- list("sl", "body_depth.adj", "ap_length.adj", "ap_width.adj", "jaw_length.adj", "ppl.adj", "ppw.adj", "dorsal_1.adj", "dorsal_2.adj", "dorsal_3.adj", "pelvic_spine.adj", "eye_diameter.adj")
+numeric_traits_2 <- c("sl", "body_depth.adj", "ap_length.adj", "ap_width.adj", "jaw_length.adj", "ppl.adj", "ppw.adj", "dorsal_1.adj", "dorsal_2.adj", "dorsal_3.adj", "pelvic_spine.adj", "eye_diameter.adj")
 
 countable_traits <- list(ap_pa, pp_pa, dorsal_1_pa, dorsal_2_pa, dorsal_3_pa, pelvic_spine_pa)
 
 lakes <- list(drizzle, mayer, rouge, boulton, serendipity)
+
+
+for (trait in traits.cont) {
+  cat("\n### Summary for:", trait, "###\n")
+  print(summary(Q1.models[[trait]]))
+}
+
 ```
 
 
