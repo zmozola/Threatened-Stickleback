@@ -15,6 +15,7 @@ rm(list=ls())
 
 pacman::p_load(tidyverse, here, janitor, ggplot2, ggsignif, ggpubr)
 
+
 #Old way of doing it maybe not necessary?
 library(tidyverse)
 library(here)
@@ -25,6 +26,8 @@ library(ggpubr)
 
 
 
+#=======
+#>>>>>>> 9c0dbe4f94e1273edd5b1255049a99e60bd6020f
 ```
 
 ```{r Read-In}
@@ -33,7 +36,6 @@ library(ggpubr)
 #data1 <- read_csv("../Data/ZM Data Sheet Cleaned Reduced.csv")
 
 data2 <- read_csv(here("Data", "ZM Data Sheet Extra Measurements.csv"))
-
 
 ```
 
@@ -105,9 +107,6 @@ dataclean$pelvic_spine.adj<-dataclean$pelvic_spine*(mean(dataclean$sl)/dataclean
 dataclean$eye_diameter.adj<-dataclean$eye_diameter*(mean(dataclean$sl)/dataclean$sl)^Coef["eye",]
 
 
-
-
-
 #Make Boulton
 boulton <- dataclean %>%
   filter(body_of_water=="Boulton Lake")
@@ -129,8 +128,11 @@ serendipity <- dataclean %>%
 rouge <- dataclean %>%
   filter(body_of_water=="Rouge Lake")
 
-
 ```
+
+
+
+
 
 ```{r Formula Setup}
 
@@ -145,23 +147,35 @@ countable_traits <- list(ap_pa, pp_pa, dorsal_1_pa, dorsal_2_pa, dorsal_3_pa, pe
 
 lakes <- list(drizzle, mayer, rouge, boulton, serendipity)
 
-
+#huh?
 for (trait in traits.cont) {
   cat("\n### Summary for:", trait, "###\n")
   print(summary(Q1.models[[trait]]))
 }
 
+
+
 ```
 
 
+#Export clean data NOT READY YET
+```{r}
+write.csv(dataclean, "../Data/data.clean.csv")
+```
 
 
+#PCA of defensive traits NOT READY YET
+```{r}
+trait_def <- c("ap_length.adj", "ap_width.adj", "ppl.adj", "ppw.adj", 
+               "dorsal_1.adj", "dorsal_2.adj", "pelvic_spine.adj", "plate_lr_total")  
+
+pca.for <- prcomp(dataclean[, trait_def], scale. = TRUE)  
+pc_scores.for <- as.data.frame(pca.for$x)
+summary(pca.for)
+```
 
 
-
-
-
-NOT SET FOR MY DATA YET
+# Other NOT READY YET
 ```{r T test loop + pool check}
 # Empty list to store models
 Q1.models <- list()
