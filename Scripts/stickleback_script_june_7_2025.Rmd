@@ -138,80 +138,28 @@ rouge <- dataclean %>%
 
 #Make lists for for loops
 
-numeric_traits <- list(sl, body_depth.adj, ap_length.adj, ap_width.adj, jaw_length.adj, ppl.adj, ppw.adj, dorsal_1.adj, dorsal_2.adj, dorsal_3.adj, pelvic_spine.adj, eye_diameter.adj)
-
-numeric_traits <- list("sl", "body_depth.adj", "ap_length.adj", "ap_width.adj", "jaw_length.adj", "ppl.adj", "ppw.adj", "dorsal_1.adj", "dorsal_2.adj", "dorsal_3.adj", "pelvic_spine.adj", "eye_diameter.adj")
 numeric_traits_2 <- c("sl", "body_depth.adj", "ap_length.adj", "ap_width.adj", "jaw_length.adj", "ppl.adj", "ppw.adj", "dorsal_1.adj", "dorsal_2.adj", "dorsal_3.adj", "pelvic_spine.adj", "eye_diameter.adj")
 
 countable_traits <- list(ap_pa, pp_pa, dorsal_1_pa, dorsal_2_pa, dorsal_3_pa, pelvic_spine_pa)
 
-lakes <- list(drizzle, mayer, rouge, boulton, serendipity)
+lakes2 <- c("drizzle", "mayer", "rouge", "boulton", "serendipity")
 
 ```
 
 # Test For loop 1
 
 ``` {r Loop Test}
-
-#Makes stupid flat graphs (i is character)
+#This works! Data pronoun! .data[[]]
+#Loop for one lake through traits (outliers)
 for (i in numeric_traits_2) {
-    print(ggplot(rouge, aes(x = sl, y = i)) + geom_point(color = "purple") + geom_text(aes(label = fish_id), color = "purple"))
+    print(ggplot(rouge, aes(x = sl, y = .data[[i]])) + geom_point(color = "purple") + geom_text(aes(label = fish_id), color = "purple"))
 }
 
-#Error "Missing aesthetics y"
-for (i in numeric_traits_2) {
-    print(ggplot(rouge, aes(x = sl, y = rouge$i)) + geom_point(color = "purple") + geom_text(aes(label = fish_id), color = "purple"))
+#Figure out how to loop lakes
+for (j in lakes2) {
+    print(ggplot(j, aes(x = sl, y = body_depth.adj)) + geom_point() + geom_text(aes(label = fish_id)))
 }
 
-#???
-for (i in numeric_traits_2) {
-    print(ggplot(rouge, aes(x = sl, y = rouge$i)) + geom_point(color = "purple") + geom_text(aes(label = fish_id), color = "purple"))
-}
-
-
-#Error "Missing aesthetics y"
-for (i in colnames(rouge)) {
-  if (i %in% numeric_traits_2)
-    print(ggplot(rouge, aes(x = sl, y = rouge$i)) + geom_point(color = "purple") + geom_text(aes(label = fish_id), color = "purple"))
-}
-
-# Error "Can't subset columns past the end."
-for (i in colnames(rouge)) {
-  if (i %in% numeric_traits_2)
-    print(ggplot(rouge, aes(x = sl, y = rouge[ , i])) +
-          geom_point())
-}
-
-# Error "Can't subset columns past the end."
-for (i in colnames(rouge)) {
-  if (i %in% numeric_traits_2)
-    print(ggplot(rouge, aes(x = sl, y = rouge[i])) +
-          geom_point())
-}
-
-
-#Works
-for (i in numeric_traits_2) {
-    print(rouge[i])
-}
-
-for (i in numeric_traits_2) {
-    print(class(i))
-}
-
-#Works
-print(rouge$"sl")
-
-#Works
-for (i in colnames(rouge)) {
-  if (i %in% numeric_traits_2)
-    message(i)
-}
-
-
-
-#Works
-print(ggplot(rouge, aes(x = sl, y = rouge$"body_depth.adj")) + geom_point(color = "purple") + geom_text(aes(label = fish_id), color = "purple"))
 ```
 
 
