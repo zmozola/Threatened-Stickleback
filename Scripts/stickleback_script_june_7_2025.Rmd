@@ -147,14 +147,71 @@ countable_traits <- list(ap_pa, pp_pa, dorsal_1_pa, dorsal_2_pa, dorsal_3_pa, pe
 
 lakes <- list(drizzle, mayer, rouge, boulton, serendipity)
 
-#huh?
-for (trait in traits.cont) {
-  cat("\n### Summary for:", trait, "###\n")
-  print(summary(Q1.models[[trait]]))
+```
+
+# Test For loop 1
+
+``` {r Loop Test}
+
+#Makes stupid flat graphs (i is character)
+for (i in numeric_traits_2) {
+    print(ggplot(rouge, aes(x = sl, y = i)) + geom_point(color = "purple") + geom_text(aes(label = fish_id), color = "purple"))
+}
+
+#Error "Missing aesthetics y"
+for (i in numeric_traits_2) {
+    print(ggplot(rouge, aes(x = sl, y = rouge$i)) + geom_point(color = "purple") + geom_text(aes(label = fish_id), color = "purple"))
+}
+
+#???
+for (i in numeric_traits_2) {
+    print(ggplot(rouge, aes(x = sl, y = rouge$i)) + geom_point(color = "purple") + geom_text(aes(label = fish_id), color = "purple"))
+}
+
+
+#Error "Missing aesthetics y"
+for (i in colnames(rouge)) {
+  if (i %in% numeric_traits_2)
+    print(ggplot(rouge, aes(x = sl, y = rouge$i)) + geom_point(color = "purple") + geom_text(aes(label = fish_id), color = "purple"))
+}
+
+# Error "Can't subset columns past the end."
+for (i in colnames(rouge)) {
+  if (i %in% numeric_traits_2)
+    print(ggplot(rouge, aes(x = sl, y = rouge[ , i])) +
+          geom_point())
+}
+
+# Error "Can't subset columns past the end."
+for (i in colnames(rouge)) {
+  if (i %in% numeric_traits_2)
+    print(ggplot(rouge, aes(x = sl, y = rouge[i])) +
+          geom_point())
+}
+
+
+#Works
+for (i in numeric_traits_2) {
+    print(rouge[i])
+}
+
+for (i in numeric_traits_2) {
+    print(class(i))
+}
+
+#Works
+print(rouge$"sl")
+
+#Works
+for (i in colnames(rouge)) {
+  if (i %in% numeric_traits_2)
+    message(i)
 }
 
 
 
+#Works
+print(ggplot(rouge, aes(x = sl, y = rouge$"body_depth.adj")) + geom_point(color = "purple") + geom_text(aes(label = fish_id), color = "purple"))
 ```
 
 
