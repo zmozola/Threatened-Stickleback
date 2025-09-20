@@ -138,29 +138,84 @@ rouge <- dataclean %>%
 
 #Make lists for for loops
 
-numeric_traits_2 <- c("sl", "body_depth.adj", "ap_length.adj", "ap_width.adj", "jaw_length.adj", "ppl.adj", "ppw.adj", "dorsal_1.adj", "dorsal_2.adj", "dorsal_3.adj", "pelvic_spine.adj", "eye_diameter.adj")
+numeric_traits <- c("sl", "body_depth.adj", "ap_length.adj", "ap_width.adj", "jaw_length.adj", "ppl.adj", "ppw.adj", "dorsal_1.adj", "dorsal_2.adj", "dorsal_3.adj", "dorsal_3", "pelvic_spine.adj", "eye_diameter.adj")
 
-countable_traits <- list(ap_pa, pp_pa, dorsal_1_pa, dorsal_2_pa, dorsal_3_pa, pelvic_spine_pa)
+countable_traits <- c("ap_pa", "pp_pa", "dorsal_1_pa", "dorsal_2_pa", "dorsal_3_pa", "pelvic_spine_pa")
 
-lakes2 <- c("drizzle", "mayer", "rouge", "boulton", "serendipity")
+lakes <- c("drizzle", "mayer", "rouge", "boulton", "serendipity")
+
+lakes2 <- list(drizzle, mayer, rouge, boulton, serendipity)
 
 ```
 
 # Test For loop 1
 
-``` {r Loop Test}
+```{undefined eval=FALSE, include=FALSE}
 #This works! Data pronoun! .data[[]]
 #Loop for one lake through traits (outliers)
-for (i in numeric_traits_2) {
-    print(ggplot(rouge, aes(x = sl, y = .data[[i]])) + geom_point(color = "purple") + geom_text(aes(label = fish_id), color = "purple"))
+for (i in numeric_traits) {
+    print(ggplot(rouge, aes(x = sl, y = .data[[i]])) + geom_point(color = "red") + geom_text(aes(label = fish_id), color = "red"))
 }
 
-#Figure out how to loop lakes
+#Figure out how to loop lakes - make lakes a LIST  of full dfs not c of strings)
 for (j in lakes2) {
-    print(ggplot(j, aes(x = sl, y = body_depth.adj)) + geom_point() + geom_text(aes(label = fish_id)))
+   print(ggplot(j, aes(x = sl, y = body_depth.adj)) + geom_point(color = "deeppink2") + geom_text(aes(label = fish_id), color = "deeppink2"))
 }
+
+
+#Figure out how to loop both (yay! remember to use lakes2)
+for (j in lakes2) {
+  for (i in numeric_traits) {
+    print(ggplot(j, aes(x = sl, y = .data[[i]])) + geom_point(color = "cyan3") + geom_text(aes(label = fish_id), color = "cyan3"))
+  }
+}
+
+#Figure out how to loop by colour 
+# or maybe not
+for (j in lakes2) {
+  print(ggplot(j, aes(x = sl, y = body_depth.adj)) + geom_point(color = .data[[j]]) + geom_text(aes(label = fish_id), color = "deeppink2"))
+}
+
 
 ```
+
+#Outliers
+
+``` {r Outliers}
+#Numerical outliers
+#Drizzle
+for (i in numeric_traits) {
+    print(ggplot(drizzle, aes(x = sl, y = .data[[i]])) + geom_point(color = "chartreuse4") + geom_text(aes(label = fish_id), color = "chartreuse4"))
+}
+
+#Mayer
+for (i in numeric_traits) {
+    print(ggplot(mayer, aes(x = sl, y = .data[[i]])) + geom_point(color = "darkorange2") + geom_text(aes(label = fish_id), color = "darkorange2"))
+}
+
+#Serendipity
+for (i in numeric_traits) {
+    print(ggplot(serendipity, aes(x = sl, y = .data[[i]])) + geom_point(color = "blue") + geom_text(aes(label = fish_id), color = "blue"))
+}
+
+#Boulton
+for (i in numeric_traits) {
+    print(ggplot(boulton, aes(x = sl, y = .data[[i]])) + geom_point(color = "purple") + geom_text(aes(label = fish_id), color = "purple"))
+}
+
+#Rouge
+for (i in numeric_traits) {
+    print(ggplot(rouge, aes(x = sl, y = .data[[i]])) + geom_point(color = "red") + geom_text(aes(label = fish_id), color = "red"))
+}
+
+
+
+
+```
+
+
+
+
 
 
 #Export clean data NOT READY YET
