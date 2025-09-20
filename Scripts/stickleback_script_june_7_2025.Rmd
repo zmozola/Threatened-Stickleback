@@ -37,12 +37,15 @@ library(ggpubr)
 
 data2 <- read_csv(here("Data", "ZM Data Sheet Extra Measurements.csv"))
 
+data3 <- read_csv(here("Data", "ZM Data Sheet Outliers Removed Sep 20 2025.csv"))
+
 ```
 
 
 ```{r Cleaning}
 # Set Current dataset 
-data <- data2
+#data <- data2 #Outliers in
+data <- data3 #Outliers removed
 
 
 #Encleanenate
@@ -213,7 +216,12 @@ for (i in numeric_traits) {
 
 ```
 
+# Numerical Traits
 
+```{r Numerical Traits}
+
+
+```
 
 
 
