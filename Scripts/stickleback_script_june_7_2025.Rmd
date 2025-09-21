@@ -184,6 +184,7 @@ lakes <- list("Drizzle Lake" = drizzle, "Mayer Lake" = mayer, "Serendipity Lake"
 lakes3 <- c("Drizzle Lake", "Mayer Lake", "Serendipity Lake", "Boulton Lake", "Rouge Lake")
 
 sexylakes <- list("Drizzle Lake" = drizzlesex, "Mayer Lake" = mayersex, "Serendipity Lake" = serendipitysex, "Boulton Lake" = boultonsex, "Rouge Lake" = rougesex)
+#Note, I just realized I could do this the other way with filtering within the loop
 
 lakecolours <- c("Drizzle Lake" = "chartreuse4", "Mayer Lake" = "darkorange2", "Serendipity Lake" = "blue", "Boulton Lake" = "purple", "Rouge Lake" = "red")
 
@@ -192,6 +193,8 @@ platetotals <- c("Left" = "plate_l_total", "Right" = "plate_r_total", "Both Comb
 platearrangements <- c("Left" = "plate_l_combined", "Right" = "plate_r_combined")
 
 timeperiods <- c("Historical", "Present")
+
+sex <- c("M", "F")
 
 ```
 
@@ -290,11 +293,11 @@ for (j in names(lakes)) {
 
 # Trait/Time Period/Sex
 for (j in names(sexylakes)) {
-  sexylake <- sexylakes[[j]]
-  sexylakecolour <- lakecolours[[j]]
+  lake <- sexylakes[[j]]
+  lakecolour <- lakecolours[[j]]
   for (i in numeric_traits) {
-    print(ggplot(sexylake, aes(x =  time_period, y = .data[[i]], color = sex)) +
-            geom_boxplot(fill = sexylakecolour) + 
+    print(ggplot(lake, aes(x =  time_period, y = .data[[i]], color = sex)) +
+            geom_boxplot(fill = lakecolour) + 
             theme_minimal() +  
             labs(title = j))
 }}
@@ -304,11 +307,11 @@ for (j in names(sexylakes)) {
 
 #Trait/Sex/Year
 for (j in names(sexylakes)) {
-  sexylake <- sexylakes[[j]]
-  sexylakecolour <- lakecolours[[j]]
+  lake <- sexylakes[[j]]
+  lakecolour <- lakecolours[[j]]
   for (i in numeric_traits) {
-    print(ggplot(sexylake, aes(x =  as.factor(year), y = .data[[i]], color = sex)) +
-            geom_boxplot(fill = sexylakecolour) + 
+    print(ggplot(lake, aes(x =  as.factor(year), y = .data[[i]], color = sex)) +
+            geom_boxplot(fill = lakecolour) + 
             theme_minimal() +  
             labs(title = j))
 }}
@@ -318,7 +321,7 @@ for (j in names(sexylakes)) {
 ```
 
 ##Armor Arrangements
-```{r Armor Traits}
+```{r Armor Arrangements}
 #Histograms of most common arrangements of plates
 
 
@@ -339,11 +342,11 @@ for (j in names(lakes)){
 
 
 
-#Armor/Year comparison (most common arrangements)
+#Armor/Year comparison
 for (j in names(lakes)){
   lake <- lakes[[j]]
   lakecolour <- lakecolours[[j]]
-  for (i in levels(lake[["year"]])){ #I know something is wrong right here but IDK what
+  for (i in sort(unique(lake[["year"]]))){ #Thanks ChGPT for this line :(
     for(h in platearrangements) {
       print(ggplot(data = filter(lake, year == i), 
                    aes(x = .data[[h]])) +
@@ -352,9 +355,64 @@ for (j in names(lakes)){
                    x = "Plate Arrangement", y = "Count") +
               theme_minimal())
     }}}
-  
+
+
+
+
+#Armor/Time Period/Sex comparison
+for (j in names(sexylakes)){
+  lake <- sexylakes[[j]]
+  lakecolour <- lakecolours[[j]]
+  for (i in timeperiods){
+    for(h in platearrangements) {
+      for (k in sex){
+      print(ggplot(data = filter(lake, time_period == i & sex == k ), 
+                   aes(x = .data[[h]])) +
+              geom_histogram(stat = "count", fill = lakecolour) +
+              labs(title = paste(j,i,h,k), 
+                   x = "Plate Arrangement", y = "Count") +
+              theme_minimal())
+      }}}}
+
+
+
+
+#Armor/year/Sex comparison
+for (j in names(sexylakes)){
+  lake <- sexylakes[[j]]
+  lakecolour <- lakecolours[[j]]
+  for (i in sort(unique(lake[["year"]]))) {
+    for(h in platearrangements) {
+      for (k in sex){
+      print(ggplot(data = filter(lake, year == i & sex == k ), 
+                   aes(x = .data[[h]])) +
+              geom_histogram(stat = "count", fill = lakecolour) +
+              labs(title = paste(j,i,h,k), 
+                   x = "Plate Arrangement", y = "Count") +
+              theme_minimal())
+    }}}}
 
 ```
+
+
+##Presence/Absence
+```{r Presence/Absence}
+
+#Oh boy here we go
+for (j in names(lakes)) {
+  lake <- lakes[[j]]
+  lakecolour <- lakecolours[[j]]
+  for (i in numeric_traits) {
+    print(ggplot(lake, aes(x =  as.factor(year), y = .data[[i]], color = time_period)) +
+            geom_boxplot(fill = lakecolour) + 
+            theme_minimal() +  
+            labs(title = j))
+}}
+
+
+```
+
+
 
 
 #Export clean data NOT READY YET
