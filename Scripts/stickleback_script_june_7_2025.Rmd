@@ -4,7 +4,8 @@ author: "Zoe Mozola"
 date: "2025-06-07"
 output: html_document
 ---
-
+#Setup
+##Packages and WD
 ```{r Setup}
 #Set Working Directory IN CONSOLE
 #setwd("C:/Users/zoemo/OneDrive/Documents/GitHub/Threatened-Stickleback")
@@ -30,6 +31,8 @@ library(ggpubr)
 #>>>>>>> 9c0dbe4f94e1273edd5b1255049a99e60bd6020f
 ```
 
+
+##Read-In
 ```{r Read-In}
 #data1 <- read_csv("C:/Users/zoemo/OneDrive/Documents/GitHub/Threatened-Stickleback/Data/ZM Data Sheet Cleaned Reduced.csv")
 
@@ -41,7 +44,7 @@ data3 <- read_csv(here("Data", "ZM Data Sheet Outliers Removed Sep 20 2025.csv")
 
 ```
 
-
+##Cleaning
 ```{r Cleaning}
 # Set Current dataset 
 #data <- data2 #Outliers in
@@ -65,7 +68,7 @@ dataclean <- data %>%
 
 ```
 
-
+##Allometric Adjustments
 ``` {r Allometric Adjustments}
 #ALLOMETRIC ADJUSTMENTS
 data.log <- dataclean %>%
@@ -165,12 +168,14 @@ rougesex <- sexy %>%
 
 
 
-
+##Formula Setup
 ```{r Formula Setup}
 
 #Make lists for for loops
 
-numeric_traits <- c("sl", "body_depth.adj", "ap_length.adj", "ap_width.adj", "jaw_length.adj", "ppl.adj", "ppw.adj", "dorsal_1.adj", "dorsal_2.adj", "dorsal_3.adj", "dorsal_3", "pelvic_spine.adj", "eye_diameter.adj")
+numeric_traits <- c("sl", "body_depth.adj", "ap_length.adj", "ap_width.adj", "jaw_length.adj", 
+                    "ppl.adj", "ppw.adj", "dorsal_1.adj", "dorsal_2.adj", "dorsal_3.adj", 
+                    "dorsal_3", "pelvic_spine.adj", "eye_diameter.adj", "plate_l_total", "plate_r_total")
 
 countable_traits <- c("ap_pa", "pp_pa", "dorsal_1_pa", "dorsal_2_pa", "dorsal_3_pa", "pelvic_spine_pa")
 
@@ -182,10 +187,15 @@ sexylakes <- list("Drizzle Lake" = drizzlesex, "Mayer Lake" = mayersex, "Serendi
 
 lakecolours <- c("Drizzle Lake" = "chartreuse4", "Mayer Lake" = "darkorange2", "Serendipity Lake" = "blue", "Boulton Lake" = "purple", "Rouge Lake" = "red")
 
+platetotals <- c("Left" = "plate_l_total", "Right" = "plate_r_total", "Both Combined" = "plate_lr_total")
+
+platearrangements <- c("Left" = "plate_l_combined", "Right" = "plate_r_combined")
+
+timeperiods <- c("Historical", "Present")
+
 ```
 
-# Test For loop 1
-
+## Test For loop 1
 ```{undefined eval=FALSE, include=FALSE}
 #This works! Data pronoun! .data[[]]
 #Loop for one lake through traits (outliers)
@@ -215,8 +225,8 @@ for (j in lakes) {
 
 ```
 
-#Outliers
-
+#Plotting
+##Outliers
 ``` {r Outliers}
 #Numerical outliers
 #Drizzle
@@ -249,8 +259,7 @@ for (i in numeric_traits) {
 
 ```
 
-# Numerical Traits
-
+##Numerical Traits
 ```{r Numerical Traits}
 
 #Trait/Time Period comparison (All lakes)
@@ -308,29 +317,45 @@ for (j in names(sexylakes)) {
 
 ```
 
+##Armor Arrangements
+```{r Armor Traits}
+#Histograms of most common arrangements of plates
 
 
-#CoPaste Placeholders
-```{r}
-
-#BleBle
-#Drizzle
-
-
-#Mayer
-
-
-#Serendipity
-
-
-#Boulton
-
-
-#Rouge
+#Armor/Time Period comparison
+for (j in names(lakes)){
+  lake <- lakes[[j]]
+  lakecolour <- lakecolours[[j]]
+  for (i in timeperiods){
+    for(h in platearrangements) {
+      print(ggplot(data = filter(lake, time_period == i), 
+                   aes(x = .data[[h]])) +
+              geom_histogram(stat = "count", fill = lakecolour) +
+              labs(title = paste(j,i,h), 
+                   x = "Plate Arrangement", y = "Count") +
+              theme_minimal())
+    }}}
 
 
+
+
+#Armor/Year comparison (most common arrangements)
+for (j in names(lakes)){
+  lake <- lakes[[j]]
+  lakecolour <- lakecolours[[j]]
+  for (i in levels(lake[["year"]])){ #I know something is wrong right here but IDK what
+    for(h in platearrangements) {
+      print(ggplot(data = filter(lake, year == i), 
+                   aes(x = .data[[h]])) +
+              geom_histogram(stat = "count", fill = lakecolour) +
+              labs(title = paste(j,i,h), 
+                   x = "Plate Arrangement", y = "Count") +
+              theme_minimal())
+    }}}
+  
 
 ```
+
 
 #Export clean data NOT READY YET
 ```{r}
