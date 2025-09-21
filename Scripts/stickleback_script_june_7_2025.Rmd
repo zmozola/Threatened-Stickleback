@@ -174,13 +174,13 @@ numeric_traits <- c("sl", "body_depth.adj", "ap_length.adj", "ap_width.adj", "ja
 
 countable_traits <- c("ap_pa", "pp_pa", "dorsal_1_pa", "dorsal_2_pa", "dorsal_3_pa", "pelvic_spine_pa")
 
-lakes <- c("drizzle", "mayer", "rouge", "boulton", "serendipity")
-
-lakes2 <- list(drizzle, mayer, rouge, boulton, serendipity)
+lakes <- list("Drizzle Lake" = drizzle, "Mayer Lake" = mayer, "Serendipity Lake" = serendipity, "Boulton Lake" = boulton, "Rouge Lake" = rouge)
 
 lakes3 <- c("Drizzle Lake", "Mayer Lake", "Serendipity Lake", "Boulton Lake", "Rouge Lake")
 
-sexylakes <- list(drizzlesex, mayersex, rougesex, boultonsex, serendipitysex)
+sexylakes <- list("Drizzle Lake" = drizzlesex, "Mayer Lake" = mayersex, "Serendipity Lake" = serendipitysex, "Boulton Lake" = boultonsex, "Rouge Lake" = rougesex)
+
+lakecolours <- c("Drizzle Lake" = "chartreuse4", "Mayer Lake" = "darkorange2", "Serendipity Lake" = "blue", "Boulton Lake" = "purple", "Rouge Lake" = "red")
 
 ```
 
@@ -194,13 +194,13 @@ for (i in numeric_traits) {
 }
 
 #Figure out how to loop lakes - make lakes a LIST  of full dfs not c of strings)
-for (j in lakes2) {
+for (j in lakes) {
    print(ggplot(j, aes(x = sl, y = body_depth.adj)) + geom_point(color = "deeppink2") + geom_text(aes(label = fish_id), color = "deeppink2"))
 }
 
 
-#Figure out how to loop both (yay! remember to use lakes2)
-for (j in lakes2) {
+#Figure out how to loop both (yay! remember to use lakes)
+for (j in lakes) {
   for (i in numeric_traits) {
     print(ggplot(j, aes(x = sl, y = .data[[i]])) + geom_point(color = "cyan3") + geom_text(aes(label = fish_id), color = "cyan3"))
   }
@@ -208,7 +208,7 @@ for (j in lakes2) {
 
 #Figure out how to loop by colour 
 # or maybe not
-for (j in lakes2) {
+for (j in lakes) {
   print(ggplot(j, aes(x = sl, y = body_depth.adj)) + geom_point(color = .data[[j]]) + geom_text(aes(label = fish_id), color = "deeppink2"))
 }
 
@@ -255,125 +255,53 @@ for (i in numeric_traits) {
 
 #Trait/Time Period comparison (All lakes)
 for (i in numeric_traits) {
-    print(ggplot(data = dataclean, aes(x = body_of_water, y = .data[[i]], color = time_period,)) +
-  geom_boxplot() +
-  theme_minimal() +
-  scale_color_discrete(name = "Time Period"))
+    print(ggplot(dataclean, aes(x = body_of_water, y = .data[[i]], color = time_period, fill = body_of_water)) +
+            geom_boxplot() +
+            theme_minimal() +
+            scale_fill_manual(values = lakecolours) +
+            scale_color_discrete(name = "Time Period"))
 }
-
-
-
-
 
 
 
 #Trait/Year Comparison
-#Drizzle
-for (i in numeric_traits) {
-    print(ggplot(data = drizzle, aes(x = as.factor(year), y = .data[[i]], color = time_period)) +
-  geom_boxplot(fill = "chartreuse4") +
-  theme_minimal() +
-  labs(title = "Drizzle") +
-  scale_fill_discrete(name = "Year"))
-}
-
-#Mayer
-for (i in numeric_traits) {
-    print(ggplot(data = mayer, aes(x = as.factor(year), y = .data[[i]], color = time_period)) +
-  geom_boxplot(fill = "darkorange2") +
-  theme_minimal() +
-  labs(title = "Mayer") +
-  scale_fill_discrete(name = "Year"))
-}
-
-#Serendipity
-for (i in numeric_traits) {
-    print(ggplot(data = serendipity, aes(x = as.factor(year), y = .data[[i]], color = time_period)) +
-  geom_boxplot(fill = "blue") +
-  theme_minimal() +
-  labs(title = "Serendipity") +
-  scale_fill_discrete(name = "Year"))
-}
-
-#Boulton
-for (i in numeric_traits) {
-    print(ggplot(data = boulton, aes(x = as.factor(year), y = .data[[i]], color = time_period)) +
-  geom_boxplot(fill = "purple") +
-  theme_minimal() +
-  labs(title = "Boulton") +
-  scale_fill_discrete(name = "Year"))
-}
-
-#Rouge
-for (i in numeric_traits) {
-    print(ggplot(data = rouge, aes(x = as.factor(year), y = .data[[i]], color = time_period)) +
-  geom_boxplot(fill = "red") +
-  theme_minimal() +
-  labs(title = "Rouge") +
-  scale_fill_discrete(name = "Year"))
-}
+for (j in names(lakes)) {
+  lake <- lakes[[j]]
+  lakecolour <- lakecolours[[j]]
+  for (i in numeric_traits) {
+    print(ggplot(lake, aes(x =  as.factor(year), y = .data[[i]], color = time_period)) +
+            geom_boxplot(fill = lakecolour) + 
+            theme_minimal() +  
+            labs(title = j))
+}}
 
 
 
 
 
 # Trait/Time Period/Sex
-#Drizzle
-for (i in numeric_traits) {
-    print(ggplot(data = drizzlesex, aes(x = time_period, y = .data[[i]], color = sex)) +
-  geom_boxplot(fill = "chartreuse4") +
-  theme_minimal() +
-  labs(title = "Drizzle") +
-  scale_fill_discrete(name = "Time Period"))
-}
-
-#Mayer
-for (i in numeric_traits) {
-    print(ggplot(data = mayersex, aes(x =  time_period, y = .data[[i]], color = sex)) +
-  geom_boxplot(fill = "darkorange2") +
-  theme_minimal() +
-  labs(title = "Mayer") +
-  scale_fill_discrete(name = "Time Period"))
-}
-
-#Serendipity
-for (i in numeric_traits) {
-    print(ggplot(data = serendipitysex, aes(x =  time_period, y = .data[[i]], color = sex)) +
-  geom_boxplot(fill = "blue") +
-  theme_minimal() +
-  labs(title = "Serendipity") +
-  scale_fill_discrete(name = "Time Period"))
-}
-
-#Boulton
-for (i in numeric_traits) {
-    print(ggplot(data = boultonsex, aes(x = time_period, y = .data[[i]], color = sex)) +
-  geom_boxplot(fill = "purple") +
-  theme_minimal() +
-  labs(title = "Boulton") +
-  scale_fill_discrete(name = "Time Period"))
-}
-
-#Rouge
-for (i in numeric_traits) {
-    print(ggplot(data = rougesex, aes(x =  time_period, y = .data[[i]], color = sex)) +
-  geom_boxplot(fill = "red") +
-  theme_minimal() +
-  labs(title = "Rouge") +
-  scale_fill_discrete(name = "Time Period"))
-}
+for (j in names(sexylakes)) {
+  sexylake <- sexylakes[[j]]
+  sexylakecolour <- lakecolours[[j]]
+  for (i in numeric_traits) {
+    print(ggplot(sexylake, aes(x =  time_period, y = .data[[i]], color = sex)) +
+            geom_boxplot(fill = sexylakecolour) + 
+            theme_minimal() +  
+            labs(title = j))
+}}
 
 
 
 
 #Trait/Sex/Year
-for (j in sexylakes) {
+for (j in names(sexylakes)) {
+  sexylake <- sexylakes[[j]]
+  sexylakecolour <- lakecolours[[j]]
   for (i in numeric_traits) {
-    print(ggplot(data = j, aes(x =  as.factor(year), y = .data[[i]], color = sex)) +
-  geom_boxplot() +
-  theme_minimal() +
-  labs(title = names(sexylakes[j])) +
-  scale_fill_discrete(name = "Year"))
+    print(ggplot(sexylake, aes(x =  as.factor(year), y = .data[[i]], color = sex)) +
+            geom_boxplot(fill = sexylakecolour) + 
+            theme_minimal() +  
+            labs(title = j))
 }}
 
 
