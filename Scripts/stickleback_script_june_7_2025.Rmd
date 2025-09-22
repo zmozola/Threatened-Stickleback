@@ -72,7 +72,7 @@ dataclean <- data %>%
 ``` {r Allometric Adjustments}
 #ALLOMETRIC ADJUSTMENTS
 data.log <- dataclean %>%
-  mutate_at(vars(sl, body_depth, ap_length_corrected, ap_width_corrected, jaw_length, ppl, ppw, dorsal_1, dorsal_2, pelvic_spine, eye_diameter),
+  mutate_at(vars(sl, body_depth, ap_length_corrected, ap_width_corrected, jaw_length, ppl, ppw, dorsal_1, dorsal_2, dorsal_3, pelvic_spine, eye_diameter),
                   log10)
 
 # size.coef is a function to get coefficient for #size adjustment #trait - name of trait col to get #slope coefficient
