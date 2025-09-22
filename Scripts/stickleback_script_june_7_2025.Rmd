@@ -195,7 +195,7 @@ platearrangements <- c("Left" = "plate_l_combined", "Right" = "plate_r_combined"
 timeperiods <- c("Historical", "Present")
 
 sex <- c("M", "F")
-da
+
 presabscolours <- list("N" = "indianred", "Y" = "olivedrab4")
 
 ```
@@ -464,13 +464,13 @@ for (j in names(sexylakes)) {
 
 
 #Export clean data NOT READY YET
-```{r}
+```{r eval=FALSE, include=FALSE}
 write.csv(dataclean, "../Data/data.clean.csv")
 ```
 
 
 #PCA of defensive traits NOT READY YET
-```{r}
+```{r eval=FALSE, include=FALSE}
 trait_def <- c("ap_length.adj", "ap_width.adj", "ppl.adj", "ppw.adj", 
                "dorsal_1.adj", "dorsal_2.adj", "pelvic_spine.adj", "plate_lr_total")  
 
@@ -481,7 +481,7 @@ summary(pca.for)
 
 
 # Other NOT READY YET
-```{r T test loop + pool check}
+```{r T test loop + pool check, eval=FALSE, include=FALSE}
 # Empty list to store models
 Q1.models <- list()
 
