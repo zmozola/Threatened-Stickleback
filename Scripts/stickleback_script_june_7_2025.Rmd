@@ -195,7 +195,7 @@ platearrangements <- c("Left" = "plate_l_combined", "Right" = "plate_r_combined"
 timeperiods <- c("Historical", "Present")
 
 sex <- c("M", "F")
-
+da
 presabscolours <- list("N" = "indianred", "Y" = "olivedrab4")
 
 ```
@@ -400,27 +400,64 @@ for (j in names(sexylakes)){
 ##Presence/Absence
 ```{r Presence/Absence}
 
-#Oh boy here we go
+#Pres/abs Historical/Present
 for (j in names(lakes)) {
   lake <- lakes[[j]]
   for (i in countable_traits) {
-    print(ggplot(data = boulton, aes(x =  time_period, fill = ap_pa)) +
+    print(ggplot(data = lake, aes(x =  time_period, fill = .data[[i]])) +
             geom_bar(stat = "count", position = "fill") +
-            labs(title = "Boulton Lake Ascending Process Presence Historical/Present", 
+            labs(title = paste(j,i), 
        x = "Time Period", y = "Proportion of Fish") +
          theme_minimal() +
-         scale_fill_manual(name = "Presence", values = c("indianred", "olivedrab4")))
-}}
+         scale_fill_manual(name = "Presence", values = presabscolours))
+  }}
+
+
+
+#Years
+for (j in names(lakes)) {
+  lake <- lakes[[j]]
+  for (i in countable_traits) {
+    print(ggplot(data = lake, aes(x =  as.factor(year), fill = .data[[i]])) +
+            geom_bar(stat = "count", position = "fill") +
+            labs(title = paste(j,i), 
+       x = "Year", y = "Proportion of Fish") +
+         theme_minimal() +
+         scale_fill_manual(name = "Presence", values = presabscolours))
+  }}
 
 
 
 
-ggplot(data = boulton, aes(x =  time_period, fill = ap_pa)) +
-  geom_bar(stat = "count", position = "fill") +
-  labs(title = "Boulton Lake Ascending Process Presence Historical/Present", 
-       x = "Time Period", y = "Proportion of Fish") +
-  theme_minimal() +
-  scale_fill_manual(name = "Presence", values = c("indianred", "olivedrab4"))
+#Countable Traits/Time Period/Sex
+for (j in names(sexylakes)) {
+  lake <- sexylakes[[j]]
+  for (i in countable_traits) {
+    for (k in timeperiods) {
+    print(ggplot(data = filter(lake, time_period == k), aes(x =  sex, fill = .data[[i]])) +
+            geom_bar(stat = "count", position = "fill") +
+            labs(title = paste(j,i,k), 
+       x = "Sex", y = "Proportion of Fish") +
+         theme_minimal() +
+         scale_fill_manual(name = "Presence", values = presabscolours))
+  }}}
+
+
+
+
+#Countable Traits/Years/Sex
+for (j in names(sexylakes)) {
+  lake <- sexylakes[[j]]
+  for (i in countable_traits) {
+    for (k in sort(unique(lake[["year"]]))) {
+    print(ggplot(data = filter(lake, year == k), aes(x =  sex, fill = .data[[i]])) +
+            geom_bar(stat = "count", position = "fill") +
+            labs(title = paste(j,i,k), 
+       x = "Sex", y = "Proportion of Fish") +
+         theme_minimal() +
+         scale_fill_manual(name = "Presence", values = presabscolours))
+  }}}
+
 ```
 
 
