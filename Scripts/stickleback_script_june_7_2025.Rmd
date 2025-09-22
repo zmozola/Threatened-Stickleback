@@ -196,6 +196,8 @@ timeperiods <- c("Historical", "Present")
 
 sex <- c("M", "F")
 
+presabscolours <- list("N" = "indianred", "Y" = "olivedrab4")
+
 ```
 
 ## Test For loop 1
@@ -401,15 +403,24 @@ for (j in names(sexylakes)){
 #Oh boy here we go
 for (j in names(lakes)) {
   lake <- lakes[[j]]
-  lakecolour <- lakecolours[[j]]
-  for (i in numeric_traits) {
-    print(ggplot(lake, aes(x =  as.factor(year), y = .data[[i]], color = time_period)) +
-            geom_boxplot(fill = lakecolour) + 
-            theme_minimal() +  
-            labs(title = j))
+  for (i in countable_traits) {
+    print(ggplot(data = boulton, aes(x =  time_period, fill = ap_pa)) +
+            geom_bar(stat = "count", position = "fill") +
+            labs(title = "Boulton Lake Ascending Process Presence Historical/Present", 
+       x = "Time Period", y = "Proportion of Fish") +
+         theme_minimal() +
+         scale_fill_manual(name = "Presence", values = c("indianred", "olivedrab4")))
 }}
 
 
+
+
+ggplot(data = boulton, aes(x =  time_period, fill = ap_pa)) +
+  geom_bar(stat = "count", position = "fill") +
+  labs(title = "Boulton Lake Ascending Process Presence Historical/Present", 
+       x = "Time Period", y = "Proportion of Fish") +
+  theme_minimal() +
+  scale_fill_manual(name = "Presence", values = c("indianred", "olivedrab4"))
 ```
 
 
