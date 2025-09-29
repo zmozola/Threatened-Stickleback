@@ -66,10 +66,149 @@ dataclean <- data %>%
                                             "Serendipity Lake", "Boulton Lake", 
                                             "Rouge Lake")))
 
+
+
+#Make Boulton
+boulton <- dataclean %>%
+  filter(body_of_water=="Boulton Lake")
+  
+
+#Make Drizzle
+drizzle <- dataclean %>%
+  filter(body_of_water=="Drizzle Lake")
+
+#Make Mayer
+mayer <- dataclean %>%
+  filter(body_of_water=="Mayer Lake")
+
+#Make Serendipity
+serendipity <- dataclean %>%
+  filter(body_of_water=="Serendipity Lake")
+
+#Make Rouge
+rouge <- dataclean %>%
+  filter(body_of_water=="Rouge Lake")
+
+
+
+
+
+
+
+#Make it sexy
+sexy <- dataclean %>%
+  filter(sex %in% c("M", "F"))
+
+#Make Boulton
+boultonsex <- sexy %>%
+  filter(body_of_water=="Boulton Lake")
+
+#Make Drizzle
+drizzlesex <- sexy %>%
+  filter(body_of_water=="Drizzle Lake")
+
+#Make Mayer
+mayersex <- sexy %>%
+  filter(body_of_water=="Mayer Lake")
+
+#Make Serendipity
+serendipitysex <- sexy %>%
+  filter(body_of_water=="Serendipity Lake")
+
+#Make Rouge
+rougesex <- sexy %>%
+  filter(body_of_water=="Rouge Lake")
+
 ```
 
-##Allometric Adjustments
-``` {r Allometric Adjustments}
+
+
+
+##Formula Setup
+```{r Formula Setup}
+
+#Make lists for for loops
+
+numeric_traits <- c("sl", "body_depth.adj", "ap_length.adj", "ap_width.adj", "jaw_length.adj", 
+                    "ppl.adj", "ppw.adj", "dorsal_1.adj", "dorsal_2.adj", "dorsal_3.adj", 
+                    "pelvic_spine.adj", "eye_diameter.adj", "plate_l_total", "plate_r_total")
+
+numeric_traits_noadj <- c("sl", "body_depth", "ap_length", "ap_width", "jaw_length", 
+                    "ppl", "ppw", "dorsal_1", "dorsal_2", "dorsal_3", "pelvic_spine", 
+                    "eye_diameter")
+
+numeric_traits_nosl <- c("body_depth.adj", "ap_length.adj", "ap_width.adj", "jaw_length.adj", 
+                    "ppl.adj", "ppw.adj", "dorsal_1.adj", "dorsal_2.adj", "dorsal_3.adj",
+                   "pelvic_spine.adj", "eye_diameter.adj", "plate_l_total", "plate_r_total")
+
+countable_traits <- c("ap_pa", "pp_pa", "dorsal_1_pa", "dorsal_2_pa", "dorsal_3_pa", "pelvic_spine_pa")
+
+lakes <- list("Drizzle Lake" = drizzle, "Mayer Lake" = mayer, "Serendipity Lake" = serendipity, "Boulton Lake" = boulton, "Rouge Lake" = rouge)
+
+lakes2 <- list("drizzle" = drizzle, "mayer" = mayer, "serendipity" = serendipity, "boulton" = boulton, "rouge" = rouge)
+
+lakes3 <- c("Drizzle Lake", "Mayer Lake", "Serendipity Lake", "Boulton Lake", "Rouge Lake")
+
+sexylakes <- list("Drizzle Lake" = drizzlesex, "Mayer Lake" = mayersex, "Serendipity Lake" = serendipitysex, "Boulton Lake" = boultonsex, "Rouge Lake" = rougesex)
+#Note, I just realized I could do this the other way with filtering within the loop
+
+lakecolours <- c("Drizzle Lake" = "chartreuse4", "Mayer Lake" = "darkorange2", "Serendipity Lake" = "blue", "Boulton Lake" = "purple", "Rouge Lake" = "red")
+
+platetotals <- c("Left" = "plate_l_total", "Right" = "plate_r_total", "Both Combined" = "plate_lr_total")
+
+platearrangements <- c("Left" = "plate_l_combined", "Right" = "plate_r_combined")
+
+timeperiods <- c("Historical", "Present")
+
+sex <- c("M", "F")
+
+presabscolours <- list("N" = "indianred", "Y" = "olivedrab4")
+
+```
+
+
+##Allometric Adjustments by Lake
+```{r Allometric Adjustments by Lake}
+
+#ALLOMETRIC ADJUSTMENTS
+
+#SOMETHING IS BAD AND WRONG HERE, the code loops fine but I have somehow effed up the allometric adjustment
+
+#Create list to store adjusted dfs
+adjusted_lakes <- list()
+
+for (j in names(lakes2)) {
+  lake_data <- lakes2[[j]]
+  for (i in numeric_traits_noadj) {
+    #Log transform all numerical traits in separate column
+    log_col <- paste0(i, ".log")
+    lake_data[[log_col]] <- log10(lake_data[[i]])
+    
+    #Fit ANOVA with logged traits
+    model <- lm(as.formula(paste(log_col, "~ sl")), data = lake_data) 
+    #took out by body of water since doing by water body already? Not sure if this is right
+    #Problem here??
+    slope <- model$coefficients["sl"]
+    
+    #Compute size-adjusted trait
+    adj_col <- paste0(i, ".adj")
+    lake_data[[adj_col]] <- lake_data[[log_col]] * (mean(lake_data$sl) / lake_data$sl)^slope
+  }
+  
+  #Store in the list
+  adjusted_lakes[[j]] <- lake_data
+  
+  #Add the adjusted columns to the regular dataset
+  assign(paste0(j), lake_data)
+}
+
+
+
+```
+
+
+##Allometric Adjustments (Whole)
+```{undefined eval=FALSE, include=FALSE}
 #ALLOMETRIC ADJUSTMENTS
 data.log <- dataclean %>%
   mutate_at(vars(sl, body_depth, ap_length_corrected, ap_width_corrected, jaw_length, ppl, ppw, dorsal_1, dorsal_2, dorsal_3, pelvic_spine, eye_diameter),
@@ -113,92 +252,12 @@ dataclean$pelvic_spine.adj<-dataclean$pelvic_spine*(mean(dataclean$sl)/dataclean
 dataclean$eye_diameter.adj<-dataclean$eye_diameter*(mean(dataclean$sl)/dataclean$sl)^Coef["eye",]
 
 
-#Make Boulton
-boulton <- dataclean %>%
-  filter(body_of_water=="Boulton Lake")
-  
-
-#Make Drizzle
-drizzle <- dataclean %>%
-  filter(body_of_water=="Drizzle Lake")
-
-#Make Mayer
-mayer <- dataclean %>%
-  filter(body_of_water=="Mayer Lake")
-
-#Make Serendipity
-serendipity <- dataclean %>%
-  filter(body_of_water=="Serendipity Lake")
-
-#Make Rouge
-rouge <- dataclean %>%
-  filter(body_of_water=="Rouge Lake")
 
 
-
-
-
-#Make it sexy
-sexy <- dataclean %>%
-  filter(sex %in% c("M", "F"))
-
-#Make Boulton
-boultonsex <- sexy %>%
-  filter(body_of_water=="Boulton Lake")
-
-#Make Drizzle
-drizzlesex <- sexy %>%
-  filter(body_of_water=="Drizzle Lake")
-
-#Make Mayer
-mayersex <- sexy %>%
-  filter(body_of_water=="Mayer Lake")
-
-#Make Serendipity
-serendipitysex <- sexy %>%
-  filter(body_of_water=="Serendipity Lake")
-
-#Make Rouge
-rougesex <- sexy %>%
-  filter(body_of_water=="Rouge Lake")
 
 
 ```
 
-
-
-
-##Formula Setup
-```{r Formula Setup}
-
-#Make lists for for loops
-
-numeric_traits <- c("sl", "body_depth.adj", "ap_length.adj", "ap_width.adj", "jaw_length.adj", 
-                    "ppl.adj", "ppw.adj", "dorsal_1.adj", "dorsal_2.adj", "dorsal_3.adj", 
-                    "dorsal_3", "pelvic_spine.adj", "eye_diameter.adj", "plate_l_total", "plate_r_total")
-
-countable_traits <- c("ap_pa", "pp_pa", "dorsal_1_pa", "dorsal_2_pa", "dorsal_3_pa", "pelvic_spine_pa")
-
-lakes <- list("Drizzle Lake" = drizzle, "Mayer Lake" = mayer, "Serendipity Lake" = serendipity, "Boulton Lake" = boulton, "Rouge Lake" = rouge)
-
-lakes3 <- c("Drizzle Lake", "Mayer Lake", "Serendipity Lake", "Boulton Lake", "Rouge Lake")
-
-sexylakes <- list("Drizzle Lake" = drizzlesex, "Mayer Lake" = mayersex, "Serendipity Lake" = serendipitysex, "Boulton Lake" = boultonsex, "Rouge Lake" = rougesex)
-#Note, I just realized I could do this the other way with filtering within the loop
-
-lakecolours <- c("Drizzle Lake" = "chartreuse4", "Mayer Lake" = "darkorange2", "Serendipity Lake" = "blue", "Boulton Lake" = "purple", "Rouge Lake" = "red")
-
-platetotals <- c("Left" = "plate_l_total", "Right" = "plate_r_total", "Both Combined" = "plate_lr_total")
-
-platearrangements <- c("Left" = "plate_l_combined", "Right" = "plate_r_combined")
-
-timeperiods <- c("Historical", "Present")
-
-sex <- c("M", "F")
-
-presabscolours <- list("N" = "indianred", "Y" = "olivedrab4")
-
-```
 
 ## Test For loop 1
 ```{undefined eval=FALSE, include=FALSE}
@@ -234,32 +293,18 @@ for (j in lakes) {
 ##Outliers
 ``` {r Outliers}
 #Numerical outliers
-#Drizzle
-for (i in numeric_traits) {
-    print(ggplot(drizzle, aes(x = sl, y = .data[[i]])) + geom_point(color = "chartreuse4") + geom_text(aes(label = fish_id), color = "chartreuse4"))
+
+for (j in names(lakes)) {
+  lake <- lakes[[j]]
+  lakecolour <- lakecolours[[j]]
+  for (i in numeric_traits_nosl) {
+    print(ggplot(lake, aes(x = sl, y = .data[[i]])) + 
+            geom_point(color = lakecolour) + 
+            geom_text(aes(label = fish_id), color = lakecolour) +
+            labs(title = paste(j,i))
+          )
+  }
 }
-
-#Mayer
-for (i in numeric_traits) {
-    print(ggplot(mayer, aes(x = sl, y = .data[[i]])) + geom_point(color = "darkorange2") + geom_text(aes(label = fish_id), color = "darkorange2"))
-}
-
-#Serendipity
-for (i in numeric_traits) {
-    print(ggplot(serendipity, aes(x = sl, y = .data[[i]])) + geom_point(color = "blue") + geom_text(aes(label = fish_id), color = "blue"))
-}
-
-#Boulton
-for (i in numeric_traits) {
-    print(ggplot(boulton, aes(x = sl, y = .data[[i]])) + geom_point(color = "purple") + geom_text(aes(label = fish_id), color = "purple"))
-}
-
-#Rouge
-for (i in numeric_traits) {
-    print(ggplot(rouge, aes(x = sl, y = .data[[i]])) + geom_point(color = "red") + geom_text(aes(label = fish_id), color = "red"))
-}
-
-
 
 
 ```
