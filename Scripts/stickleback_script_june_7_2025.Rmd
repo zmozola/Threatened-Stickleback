@@ -47,12 +47,12 @@ data3 <- read_csv(here("Data", "ZM Data Sheet Outliers Removed Sep 20 2025.csv")
 ##Cleaning
 ```{r Cleaning}
 # Set Current dataset 
-#data <- data2 #Outliers in
-data <- data3 #Outliers removed
+data <- data2 #Outliers in
+#data <- data3 #Outliers removed
 
 
 #Encleanenate
-dataclean <- data %>%
+dataset <- data %>%
   clean_names() %>%
   filter(!is.na(fish_id)) %>%
   #Make tag for time period
@@ -69,54 +69,24 @@ dataclean <- data %>%
 
 
 #Make Boulton
-boulton <- dataclean %>%
+boulton <- dataset %>%
   filter(body_of_water=="Boulton Lake")
   
 
 #Make Drizzle
-drizzle <- dataclean %>%
+drizzle <- dataset %>%
   filter(body_of_water=="Drizzle Lake")
 
 #Make Mayer
-mayer <- dataclean %>%
+mayer <- dataset %>%
   filter(body_of_water=="Mayer Lake")
 
 #Make Serendipity
-serendipity <- dataclean %>%
+serendipity <- dataset %>%
   filter(body_of_water=="Serendipity Lake")
 
 #Make Rouge
-rouge <- dataclean %>%
-  filter(body_of_water=="Rouge Lake")
-
-
-
-
-
-
-
-#Make it sexy
-sexy <- dataclean %>%
-  filter(sex %in% c("M", "F"))
-
-#Make Boulton
-boultonsex <- sexy %>%
-  filter(body_of_water=="Boulton Lake")
-
-#Make Drizzle
-drizzlesex <- sexy %>%
-  filter(body_of_water=="Drizzle Lake")
-
-#Make Mayer
-mayersex <- sexy %>%
-  filter(body_of_water=="Mayer Lake")
-
-#Make Serendipity
-serendipitysex <- sexy %>%
-  filter(body_of_water=="Serendipity Lake")
-
-#Make Rouge
-rougesex <- sexy %>%
+rouge <- dataset %>%
   filter(body_of_water=="Rouge Lake")
 
 ```
@@ -149,8 +119,6 @@ lakes2 <- list("drizzle" = drizzle, "mayer" = mayer, "serendipity" = serendipity
 
 lakes3 <- c("Drizzle Lake", "Mayer Lake", "Serendipity Lake", "Boulton Lake", "Rouge Lake")
 
-sexylakes <- list("Drizzle Lake" = drizzlesex, "Mayer Lake" = mayersex, "Serendipity Lake" = serendipitysex, "Boulton Lake" = boultonsex, "Rouge Lake" = rougesex)
-#Note, I just realized I could do this the other way with filtering within the loop
 
 lakecolours <- c("Drizzle Lake" = "chartreuse4", "Mayer Lake" = "darkorange2", "Serendipity Lake" = "blue", "Boulton Lake" = "purple", "Rouge Lake" = "red")
 
@@ -491,6 +459,47 @@ rouge$dorsal_2.adj<-rouge$dorsal_2*(mean(rouge$sl)/rouge$sl)^Coef["dorsal_2",]
 rouge$dorsal_3.adj<-rouge$dorsal_3*(mean(rouge$sl)/rouge$sl)^Coef["dorsal_3",]
 rouge$pelvic_spine.adj<-rouge$pelvic_spine*(mean(rouge$sl)/rouge$sl)^Coef["pelvic",]
 rouge$eye_diameter.adj<-rouge$eye_diameter*(mean(rouge$sl)/rouge$sl)^Coef["eye",]
+
+
+```
+
+
+### Smash into dataclean
+```{r Smash Dataclean}
+#Put the adjusted columns into dataclean
+
+dataclean <- bind_rows(list(drizzle, mayer, serendipity, boulton, rouge))
+
+
+
+
+
+
+
+
+#Make the data sexy
+sexy <- dataclean %>%
+  filter(sex %in% c("M", "F"))
+
+#Make Boulton
+boultonsex <- sexy %>%
+  filter(body_of_water=="Boulton Lake")
+
+#Make Drizzle
+drizzlesex <- sexy %>%
+  filter(body_of_water=="Drizzle Lake")
+
+#Make Mayer
+mayersex <- sexy %>%
+  filter(body_of_water=="Mayer Lake")
+
+#Make Serendipity
+serendipitysex <- sexy %>%
+  filter(body_of_water=="Serendipity Lake")
+
+#Make Rouge
+rougesex <- sexy %>%
+  filter(body_of_water=="Rouge Lake")
 
 
 ```
