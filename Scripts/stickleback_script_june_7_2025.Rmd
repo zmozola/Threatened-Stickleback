@@ -525,6 +525,49 @@ for (j in lakes) {
 
 ```
 
+
+##Formula Setup Again
+```{r Formula Setup}
+
+#Make lists for for loops
+
+numeric_traits <- c("sl", "body_depth.adj", "ap_length.adj", "ap_width.adj", "jaw_length.adj", 
+                    "ppl.adj", "ppw.adj", "dorsal_1.adj", "dorsal_2.adj", "dorsal_3.adj", 
+                    "pelvic_spine.adj", "eye_diameter.adj", "plate_l_total", "plate_r_total")
+
+numeric_traits_noadj <- c("sl", "body_depth", "ap_length", "ap_width", "jaw_length", 
+                    "ppl", "ppw", "dorsal_1", "dorsal_2", "dorsal_3", "pelvic_spine", 
+                    "eye_diameter")
+
+numeric_traits_nosl <- c("body_depth.adj", "ap_length.adj", "ap_width.adj", "jaw_length.adj", 
+                    "ppl.adj", "ppw.adj", "dorsal_1.adj", "dorsal_2.adj", "dorsal_3.adj",
+                   "pelvic_spine.adj", "eye_diameter.adj", "plate_l_total", "plate_r_total")
+
+countable_traits <- c("ap_pa", "pp_pa", "dorsal_1_pa", "dorsal_2_pa", "dorsal_3_pa", "pelvic_spine_pa")
+
+lakes <- list("Drizzle Lake" = drizzle, "Mayer Lake" = mayer, "Serendipity Lake" = serendipity, "Boulton Lake" = boulton, "Rouge Lake" = rouge)
+
+lakes2 <- list("drizzle" = drizzle, "mayer" = mayer, "serendipity" = serendipity, "boulton" = boulton, "rouge" = rouge)
+
+lakes3 <- c("Drizzle Lake", "Mayer Lake", "Serendipity Lake", "Boulton Lake", "Rouge Lake")
+
+sexylakes <- list("Drizzle Lake" = drizzlesex, "Mayer Lake" = mayersex, "Serendipity Lake" = serendipitysex, "Boulton Lake" = boultonsex, "Rouge Lake" = rougesex)
+#Note, I just realized I could do this the other way with filtering within the loop
+
+lakecolours <- c("Drizzle Lake" = "chartreuse4", "Mayer Lake" = "darkorange2", "Serendipity Lake" = "blue", "Boulton Lake" = "purple", "Rouge Lake" = "red")
+
+platetotals <- c("Left" = "plate_l_total", "Right" = "plate_r_total", "Both Combined" = "plate_lr_total")
+
+platearrangements <- c("Left" = "plate_l_combined", "Right" = "plate_r_combined")
+
+timeperiods <- c("Historical", "Present")
+
+sex <- c("M", "F")
+
+presabscolours <- list("N" = "indianred", "Y" = "olivedrab4")
+
+```
+
 #Plotting
 ##Outliers
 ``` {r Outliers}
