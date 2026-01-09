@@ -417,7 +417,7 @@ boulton$eye_diameter.adj<-boulton$eye_diameter*(mean(boulton$sl)/boulton$sl)^Coe
 ```
 
 ###Allometric Adjustments (Rouge)
-```{r Serendipity Allometric}
+```{r Rouge Allometric}
 #ALLOMETRIC ADJUSTMENTS
 data.log.rouge <- rouge %>%
   mutate_at(vars(sl, body_depth, ap_length_corrected, ap_width_corrected, jaw_length, ppl, ppw, dorsal_1, dorsal_2, dorsal_3, pelvic_spine, eye_diameter),
