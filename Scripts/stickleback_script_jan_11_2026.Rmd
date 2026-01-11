@@ -1,0 +1,427 @@
+---
+title: "stickleback_script_jan_11_2026"
+author: "Zoe Mozola"
+date: "2026-01-11"
+output: html_document
+---
+
+#Setup
+##Packages and WD
+```{r Setup}
+#Set Working Directory IN CONSOLE
+#setwd("C:/Users/zoemo/OneDrive/Documents/GitHub/Threatened-Stickleback")
+
+
+#Remove list = list() ?????
+rm(list=ls())
+
+pacman::p_load(tidyverse, here, janitor, ggplot2, ggsignif, ggpubr)
+
+
+#Old way of doing it maybe not necessary?
+library(tidyverse)
+library(here)
+library(janitor)
+library(ggplot2)
+library(ggsignif)
+library(ggpubr)
+
+
+```
+
+
+##Read-In
+```{r Read-In}
+
+data2 <- read_csv(here("Data", "ZM Data Sheet Extra Measurements.csv"))
+
+data3 <- read_csv(here("Data", "ZM Data Sheet Outliers Removed Sep 20 2025.csv"))
+
+```
+
+##Cleaning
+```{r Cleaning}
+# Set Current dataset 
+data <- data2 #Outliers in
+#data <- data3 #Outliers removed
+
+
+#Encleanenate
+dataset <- data %>%
+  clean_names() %>%
+  filter(!is.na(fish_id)) %>%
+  #Make tag for time period
+  mutate(time_period = ifelse(year >= 2000, "Present", "Historical")) %>%
+  #Make tag for unarmoured/giant
+  mutate(type = ifelse(body_of_water %in% c("Drizzle Lake", "Mayer Lake"), "Giant", "Unarmoured")) %>%
+  #Make Plate Arrangement a string
+  mutate(plate_l_combined = as.factor(plate_l_combined)) %>%
+  mutate(plate_r_combined = as.factor(plate_r_combined)) %>%
+  mutate(body_of_water = factor(body_of_water, levels = c("Mayer Lake", "Drizzle Lake",
+                                            "Serendipity Lake", "Boulton Lake", 
+                                            "Rouge Lake")))
+
+
+
+#Make Boulton
+boulton <- dataset %>%
+  filter(body_of_water=="Boulton Lake")
+  
+
+#Make Drizzle
+drizzle <- dataset %>%
+  filter(body_of_water=="Drizzle Lake")
+
+#Make Mayer
+mayer <- dataset %>%
+  filter(body_of_water=="Mayer Lake")
+
+#Make Serendipity
+serendipity <- dataset %>%
+  filter(body_of_water=="Serendipity Lake")
+
+#Make Rouge
+rouge <- dataset %>%
+  filter(body_of_water=="Rouge Lake")
+
+```
+
+
+
+
+##Formula Setup
+```{r Formula Setup}
+
+#Make lists for for loops
+
+numeric_traits <- c("sl", "body_depth.adj", "ap_length.adj", "ap_width.adj", "jaw_length.adj", 
+                    "ppl.adj", "ppw.adj", "dorsal_1.adj", "dorsal_2.adj", "dorsal_3.adj", 
+                    "pelvic_spine.adj", "eye_diameter.adj", "plate_l_total", "plate_r_total")
+
+numeric_traits_noadj <- c("sl", "body_depth", "ap_length", "ap_width", "jaw_length", 
+                    "ppl", "ppw", "dorsal_1", "dorsal_2", "dorsal_3", "pelvic_spine", 
+                    "eye_diameter")
+
+numeric_traits_nosl <- c("body_depth.adj", "ap_length.adj", "ap_width.adj", "jaw_length.adj", 
+                    "ppl.adj", "ppw.adj", "dorsal_1.adj", "dorsal_2.adj", "dorsal_3.adj",
+                   "pelvic_spine.adj", "eye_diameter.adj", "plate_l_total", "plate_r_total")
+
+countable_traits <- c("ap_pa", "pp_pa", "dorsal_1_pa", "dorsal_2_pa", "dorsal_3_pa", "pelvic_spine_pa")
+
+lakes <- list("Drizzle Lake" = drizzle, "Mayer Lake" = mayer, "Serendipity Lake" = serendipity, "Boulton Lake" = boulton, "Rouge Lake" = rouge)
+
+lakes2 <- list("drizzle" = drizzle, "mayer" = mayer, "serendipity" = serendipity, "boulton" = boulton, "rouge" = rouge)
+
+lakes3 <- c("Drizzle Lake", "Mayer Lake", "Serendipity Lake", "Boulton Lake", "Rouge Lake")
+
+
+lakecolours <- c("Drizzle Lake" = "chartreuse4", "Mayer Lake" = "darkorange2", "Serendipity Lake" = "blue", "Boulton Lake" = "purple", "Rouge Lake" = "red")
+
+platetotals <- c("Left" = "plate_l_total", "Right" = "plate_r_total", "Both Combined" = "plate_lr_total")
+
+platearrangements <- c("Left" = "plate_l_combined", "Right" = "plate_r_combined")
+
+timeperiods <- c("Historical", "Present")
+
+sex <- c("M", "F")
+
+presabscolours <- list("N" = "indianred", "Y" = "olivedrab4")
+
+```
+
+
+###Allometric Adjustments (Drizzle)
+```{r Drizzle Allometric}
+#ALLOMETRIC ADJUSTMENTS
+data.log.drizzle <- drizzle %>%
+  mutate_at(vars(sl, body_depth, ap_length_corrected, ap_width_corrected, jaw_length, ppl, ppw, dorsal_1, dorsal_2, dorsal_3, pelvic_spine, eye_diameter),
+                  log10)
+
+# size.coef is a function to get coefficient for #size adjustment #trait - name of trait col to get #slope coefficient
+size.coef<-function(trait){
+  ancova=lm(data=data.log.drizzle, trait~sl+time_period)
+  coef=ancova$coefficients[2]
+  coef
+}
+
+#the following line produces slope coefficient. #Repeat for each trait.
+BD.coef<-size.coef(data.log.drizzle$body_depth)
+APL.coef<-size.coef(data.log.drizzle$ap_length_corrected)
+APW.coef<-size.coef(data.log.drizzle$ap_width_corrected)
+JL.coef<-size.coef(data.log.drizzle$jaw_length)
+PPL.coef<-size.coef(data.log.drizzle$ppl)
+PPW.coef<-size.coef(data.log.drizzle$ppw)
+D1.coef<-size.coef(data.log.drizzle$dorsal_1) #log of 0 is infinity
+D2.coef<-size.coef(data.log.drizzle$dorsal_2)
+D3.coef<-size.coef(data.log.drizzle$dorsal_3)
+PS.coef<-size.coef(data.log.drizzle$pelvic_spine)
+ED.coef<-size.coef(data.log.drizzle$eye_diameter)
+
+# following makes a matrix 1 x k matrix of slopes for each trait
+Coef<-matrix(c(BD.coef, APL.coef, APW.coef,JL.coef, PPL.coef, PPW.coef, D1.coef, D2.coef, D3.coef, PS.coef, ED.coef),dimnames = list(c("body_depth", "ap_length", "ap_width", "jaw_length", "ppl", "ppw", "dorsal_1", "dorsal_2", "dorsal_3", "pelvic", "eye")))
+
+
+# Adjusts trait value using formula: Xadj=Xi*(mean(sl)/SLi)^b
+drizzle$body_depth.adj<-drizzle$body_depth*(mean(drizzle$sl)/drizzle$sl)^Coef["body_depth",]
+drizzle$ap_length.adj<-drizzle$ap_length_corrected*(mean(drizzle$sl)/drizzle$sl)^Coef["ap_length",]
+drizzle$ap_width.adj<-drizzle$ap_width_corrected*(mean(drizzle$sl)/drizzle$sl)^Coef["ap_width",]
+drizzle$jaw_length.adj<-drizzle$jaw_length*(mean(drizzle$sl)/drizzle$sl)^Coef["jaw_length",]
+drizzle$ppl.adj<-drizzle$ppl*(mean(drizzle$sl)/drizzle$sl)^Coef["ppl",]
+drizzle$ppw.adj<-drizzle$ppw*(mean(drizzle$sl)/drizzle$sl)^Coef["ppw",]
+drizzle$dorsal_1.adj<-drizzle$dorsal_1*(mean(drizzle$sl)/drizzle$sl)^Coef["dorsal_1",]
+drizzle$dorsal_2.adj<-drizzle$dorsal_2*(mean(drizzle$sl)/drizzle$sl)^Coef["dorsal_2",]
+drizzle$dorsal_3.adj<-drizzle$dorsal_3*(mean(drizzle$sl)/drizzle$sl)^Coef["dorsal_3",]
+drizzle$pelvic_spine.adj<-drizzle$pelvic_spine*(mean(drizzle$sl)/drizzle$sl)^Coef["pelvic",]
+drizzle$eye_diameter.adj<-drizzle$eye_diameter*(mean(drizzle$sl)/drizzle$sl)^Coef["eye",]
+
+
+```
+
+
+###Allometric Adjustments (Mayer)
+```{r Mayer Allometric}
+#ALLOMETRIC ADJUSTMENTS
+data.log.mayer <- mayer %>%
+  mutate_at(vars(sl, body_depth, ap_length_corrected, ap_width_corrected, jaw_length, ppl, ppw, dorsal_1, dorsal_2, dorsal_3, pelvic_spine, eye_diameter),
+                  log10)
+
+# size.coef is a function to get coefficient for #size adjustment #trait - name of trait col to get #slope coefficient
+size.coef<-function(trait){
+  ancova=lm(data=data.log.mayer, trait~sl+time_period)
+  coef=ancova$coefficients[2]
+  coef
+}
+
+#the following line produces slope coefficient. #Repeat for each trait.
+BD.coef<-size.coef(data.log.mayer$body_depth)
+APL.coef<-size.coef(data.log.mayer$ap_length_corrected)
+APW.coef<-size.coef(data.log.mayer$ap_width_corrected)
+JL.coef<-size.coef(data.log.mayer$jaw_length)
+PPL.coef<-size.coef(data.log.mayer$ppl)
+PPW.coef<-size.coef(data.log.mayer$ppw)
+D1.coef<-size.coef(data.log.mayer$dorsal_1) #log of 0 is infinity
+D2.coef<-size.coef(data.log.mayer$dorsal_2)
+D3.coef<-size.coef(data.log.mayer$dorsal_3)
+PS.coef<-size.coef(data.log.mayer$pelvic_spine)
+ED.coef<-size.coef(data.log.mayer$eye_diameter)
+
+# following makes a matrix 1 x k matrix of slopes for each trait
+Coef<-matrix(c(BD.coef, APL.coef, APW.coef,JL.coef, PPL.coef, PPW.coef, D1.coef, D2.coef, D3.coef, PS.coef, ED.coef),dimnames = list(c("body_depth", "ap_length", "ap_width", "jaw_length", "ppl", "ppw", "dorsal_1", "dorsal_2", "dorsal_3", "pelvic", "eye")))
+
+
+# Adjusts trait value using formula: Xadj=Xi*(mean(sl)/SLi)^b
+mayer$body_depth.adj<-mayer$body_depth*(mean(mayer$sl)/mayer$sl)^Coef["body_depth",]
+mayer$ap_length.adj<-mayer$ap_length_corrected*(mean(mayer$sl)/mayer$sl)^Coef["ap_length",]
+mayer$ap_width.adj<-mayer$ap_width_corrected*(mean(mayer$sl)/mayer$sl)^Coef["ap_width",]
+mayer$jaw_length.adj<-mayer$jaw_length*(mean(mayer$sl)/mayer$sl)^Coef["jaw_length",]
+mayer$ppl.adj<-mayer$ppl*(mean(mayer$sl)/mayer$sl)^Coef["ppl",]
+mayer$ppw.adj<-mayer$ppw*(mean(mayer$sl)/mayer$sl)^Coef["ppw",]
+mayer$dorsal_1.adj<-mayer$dorsal_1*(mean(mayer$sl)/mayer$sl)^Coef["dorsal_1",]
+mayer$dorsal_2.adj<-mayer$dorsal_2*(mean(mayer$sl)/mayer$sl)^Coef["dorsal_2",]
+mayer$dorsal_3.adj<-mayer$dorsal_3*(mean(mayer$sl)/mayer$sl)^Coef["dorsal_3",]
+mayer$pelvic_spine.adj<-mayer$pelvic_spine*(mean(mayer$sl)/mayer$sl)^Coef["pelvic",]
+mayer$eye_diameter.adj<-mayer$eye_diameter*(mean(mayer$sl)/mayer$sl)^Coef["eye",]
+
+
+```
+
+###Allometric Adjustments (Serendipity)
+```{r Serendipity Allometric}
+#ALLOMETRIC ADJUSTMENTS
+data.log.serendipity <- serendipity %>%
+  mutate_at(vars(sl, body_depth, ap_length_corrected, ap_width_corrected, jaw_length, ppl, ppw, dorsal_1, dorsal_2, dorsal_3, pelvic_spine, eye_diameter),
+                  log10)
+
+# size.coef is a function to get coefficient for #size adjustment #trait - name of trait col to get #slope coefficient
+size.coef<-function(trait){
+  ancova=lm(data=data.log.serendipity, trait~sl+time_period)
+  coef=ancova$coefficients[2]
+  coef
+}
+
+#the following line produces slope coefficient. #Repeat for each trait.
+BD.coef<-size.coef(data.log.serendipity$body_depth)
+APL.coef<-size.coef(data.log.serendipity$ap_length_corrected)
+APW.coef<-size.coef(data.log.serendipity$ap_width_corrected)
+JL.coef<-size.coef(data.log.serendipity$jaw_length)
+PPL.coef<-size.coef(data.log.serendipity$ppl)
+PPW.coef<-size.coef(data.log.serendipity$ppw)
+D1.coef<-size.coef(data.log.serendipity$dorsal_1) #log of 0 is infinity
+D2.coef<-size.coef(data.log.serendipity$dorsal_2)
+D3.coef<-size.coef(data.log.serendipity$dorsal_3)
+PS.coef<-size.coef(data.log.serendipity$pelvic_spine)
+ED.coef<-size.coef(data.log.serendipity$eye_diameter)
+
+# following makes a matrix 1 x k matrix of slopes for each trait
+Coef<-matrix(c(BD.coef, APL.coef, APW.coef,JL.coef, PPL.coef, PPW.coef, D1.coef, D2.coef, D3.coef, PS.coef, ED.coef),dimnames = list(c("body_depth", "ap_length", "ap_width", "jaw_length", "ppl", "ppw", "dorsal_1", "dorsal_2", "dorsal_3", "pelvic", "eye")))
+
+
+# Adjusts trait value using formula: Xadj=Xi*(mean(sl)/SLi)^b
+serendipity$body_depth.adj<-serendipity$body_depth*(mean(serendipity$sl)/serendipity$sl)^Coef["body_depth",]
+serendipity$ap_length.adj<-serendipity$ap_length_corrected*(mean(serendipity$sl)/serendipity$sl)^Coef["ap_length",]
+serendipity$ap_width.adj<-serendipity$ap_width_corrected*(mean(serendipity$sl)/serendipity$sl)^Coef["ap_width",]
+serendipity$jaw_length.adj<-serendipity$jaw_length*(mean(serendipity$sl)/serendipity$sl)^Coef["jaw_length",]
+serendipity$ppl.adj<-serendipity$ppl*(mean(serendipity$sl)/serendipity$sl)^Coef["ppl",]
+serendipity$ppw.adj<-serendipity$ppw*(mean(serendipity$sl)/serendipity$sl)^Coef["ppw",]
+serendipity$dorsal_1.adj<-serendipity$dorsal_1*(mean(serendipity$sl)/serendipity$sl)^Coef["dorsal_1",]
+serendipity$dorsal_2.adj<-serendipity$dorsal_2*(mean(serendipity$sl)/serendipity$sl)^Coef["dorsal_2",]
+serendipity$dorsal_3.adj<-serendipity$dorsal_3*(mean(serendipity$sl)/serendipity$sl)^Coef["dorsal_3",]
+serendipity$pelvic_spine.adj<-serendipity$pelvic_spine*(mean(serendipity$sl)/serendipity$sl)^Coef["pelvic",]
+serendipity$eye_diameter.adj<-serendipity$eye_diameter*(mean(serendipity$sl)/serendipity$sl)^Coef["eye",]
+
+
+```
+
+
+###Allometric Adjustments (Boulton)
+```{r Serendipity Allometric}
+#ALLOMETRIC ADJUSTMENTS
+data.log.boulton <- boulton %>%
+  mutate_at(vars(sl, body_depth, ap_length_corrected, ap_width_corrected, jaw_length, ppl, ppw, dorsal_1, dorsal_2, dorsal_3, pelvic_spine, eye_diameter),
+                  log10)
+
+# size.coef is a function to get coefficient for #size adjustment #trait - name of trait col to get #slope coefficient
+size.coef<-function(trait){
+  ancova=lm(data=data.log.boulton, trait~sl+time_period)
+  coef=ancova$coefficients[2]
+  coef
+}
+
+#the following line produces slope coefficient. #Repeat for each trait.
+BD.coef<-size.coef(data.log.boulton$body_depth)
+APL.coef<-size.coef(data.log.boulton$ap_length_corrected)
+APW.coef<-size.coef(data.log.boulton$ap_width_corrected)
+JL.coef<-size.coef(data.log.boulton$jaw_length)
+PPL.coef<-size.coef(data.log.boulton$ppl)
+PPW.coef<-size.coef(data.log.boulton$ppw)
+D1.coef<-size.coef(data.log.boulton$dorsal_1) #log of 0 is infinity
+D2.coef<-size.coef(data.log.boulton$dorsal_2)
+D3.coef<-size.coef(data.log.boulton$dorsal_3)
+PS.coef<-size.coef(data.log.boulton$pelvic_spine)
+ED.coef<-size.coef(data.log.boulton$eye_diameter)
+
+# following makes a matrix 1 x k matrix of slopes for each trait
+Coef<-matrix(c(BD.coef, APL.coef, APW.coef,JL.coef, PPL.coef, PPW.coef, D1.coef, D2.coef, D3.coef, PS.coef, ED.coef),dimnames = list(c("body_depth", "ap_length", "ap_width", "jaw_length", "ppl", "ppw", "dorsal_1", "dorsal_2", "dorsal_3", "pelvic", "eye")))
+
+
+# Adjusts trait value using formula: Xadj=Xi*(mean(sl)/SLi)^b
+boulton$body_depth.adj<-boulton$body_depth*(mean(boulton$sl)/boulton$sl)^Coef["body_depth",]
+boulton$ap_length.adj<-boulton$ap_length_corrected*(mean(boulton$sl)/boulton$sl)^Coef["ap_length",]
+boulton$ap_width.adj<-boulton$ap_width_corrected*(mean(boulton$sl)/boulton$sl)^Coef["ap_width",]
+boulton$jaw_length.adj<-boulton$jaw_length*(mean(boulton$sl)/boulton$sl)^Coef["jaw_length",]
+boulton$ppl.adj<-boulton$ppl*(mean(boulton$sl)/boulton$sl)^Coef["ppl",]
+boulton$ppw.adj<-boulton$ppw*(mean(boulton$sl)/boulton$sl)^Coef["ppw",]
+boulton$dorsal_1.adj<-boulton$dorsal_1*(mean(boulton$sl)/boulton$sl)^Coef["dorsal_1",]
+boulton$dorsal_2.adj<-boulton$dorsal_2*(mean(boulton$sl)/boulton$sl)^Coef["dorsal_2",]
+boulton$dorsal_3.adj<-boulton$dorsal_3*(mean(boulton$sl)/boulton$sl)^Coef["dorsal_3",]
+boulton$pelvic_spine.adj<-boulton$pelvic_spine*(mean(boulton$sl)/boulton$sl)^Coef["pelvic",]
+boulton$eye_diameter.adj<-boulton$eye_diameter*(mean(boulton$sl)/boulton$sl)^Coef["eye",]
+
+
+```
+
+###Allometric Adjustments (Rouge)
+```{r Rouge Allometric}
+#ALLOMETRIC ADJUSTMENTS
+data.log.rouge <- rouge %>%
+  mutate_at(vars(sl, body_depth, ap_length_corrected, ap_width_corrected, jaw_length, ppl, ppw, dorsal_1, dorsal_2, dorsal_3, pelvic_spine, eye_diameter),
+                  log10)
+
+# size.coef is a function to get coefficient for #size adjustment #trait - name of trait col to get #slope coefficient
+size.coef<-function(trait){
+  ancova=lm(data=data.log.rouge, trait~sl+time_period)
+  coef=ancova$coefficients[2]
+  coef
+}
+
+#the following line produces slope coefficient. #Repeat for each trait.
+BD.coef<-size.coef(data.log.rouge$body_depth)
+APL.coef<-size.coef(data.log.rouge$ap_length_corrected)
+APW.coef<-size.coef(data.log.rouge$ap_width_corrected)
+JL.coef<-size.coef(data.log.rouge$jaw_length)
+PPL.coef<-size.coef(data.log.rouge$ppl)
+PPW.coef<-size.coef(data.log.rouge$ppw)
+D1.coef<-size.coef(data.log.rouge$dorsal_1) #log of 0 is infinity
+D2.coef<-size.coef(data.log.rouge$dorsal_2)
+D3.coef<-size.coef(data.log.rouge$dorsal_3)
+PS.coef<-size.coef(data.log.rouge$pelvic_spine)
+ED.coef<-size.coef(data.log.rouge$eye_diameter)
+
+# following makes a matrix 1 x k matrix of slopes for each trait
+Coef<-matrix(c(BD.coef, APL.coef, APW.coef,JL.coef, PPL.coef, PPW.coef, D1.coef, D2.coef, D3.coef, PS.coef, ED.coef),dimnames = list(c("body_depth", "ap_length", "ap_width", "jaw_length", "ppl", "ppw", "dorsal_1", "dorsal_2", "dorsal_3", "pelvic", "eye")))
+
+
+# Adjusts trait value using formula: Xadj=Xi*(mean(sl)/SLi)^b
+rouge$body_depth.adj<-rouge$body_depth*(mean(rouge$sl)/rouge$sl)^Coef["body_depth",]
+rouge$ap_length.adj<-rouge$ap_length_corrected*(mean(rouge$sl)/rouge$sl)^Coef["ap_length",]
+rouge$ap_width.adj<-rouge$ap_width_corrected*(mean(rouge$sl)/rouge$sl)^Coef["ap_width",]
+rouge$jaw_length.adj<-rouge$jaw_length*(mean(rouge$sl)/rouge$sl)^Coef["jaw_length",]
+rouge$ppl.adj<-rouge$ppl*(mean(rouge$sl)/rouge$sl)^Coef["ppl",]
+rouge$ppw.adj<-rouge$ppw*(mean(rouge$sl)/rouge$sl)^Coef["ppw",]
+rouge$dorsal_1.adj<-rouge$dorsal_1*(mean(rouge$sl)/rouge$sl)^Coef["dorsal_1",]
+rouge$dorsal_2.adj<-rouge$dorsal_2*(mean(rouge$sl)/rouge$sl)^Coef["dorsal_2",]
+rouge$dorsal_3.adj<-rouge$dorsal_3*(mean(rouge$sl)/rouge$sl)^Coef["dorsal_3",]
+rouge$pelvic_spine.adj<-rouge$pelvic_spine*(mean(rouge$sl)/rouge$sl)^Coef["pelvic",]
+rouge$eye_diameter.adj<-rouge$eye_diameter*(mean(rouge$sl)/rouge$sl)^Coef["eye",]
+
+
+```
+
+
+### Smash into dataclean
+```{r Smash Dataclean}
+#Put the adjusted columns into dataclean
+
+dataclean <- bind_rows(list(drizzle, mayer, serendipity, boulton, rouge))
+
+
+
+
+
+
+
+
+#Make the data sexy
+sexy <- dataclean %>%
+  filter(sex %in% c("M", "F"))
+
+#Make Boulton
+boultonsex <- sexy %>%
+  filter(body_of_water=="Boulton Lake")
+
+#Make Drizzle
+drizzlesex <- sexy %>%
+  filter(body_of_water=="Drizzle Lake")
+
+#Make Mayer
+mayersex <- sexy %>%
+  filter(body_of_water=="Mayer Lake")
+
+#Make Serendipity
+serendipitysex <- sexy %>%
+  filter(body_of_water=="Serendipity Lake")
+
+#Make Rouge
+rougesex <- sexy %>%
+  filter(body_of_water=="Rouge Lake")
+
+
+```
+
+
+## Additional Formula Setup Again
+```{r Additional Formula Setup}
+
+#Make lists for for loops
+
+sexylakes <- list("Drizzle Lake" = drizzlesex, "Mayer Lake" = mayersex, "Serendipity Lake" = serendipitysex, "Boulton Lake" = boultonsex, "Rouge Lake" = rougesex)
+#Note, I just realized I could do this the other way with filtering within the loop
+
+```
+
+
+## Unarmoured Graphs
+
+```{r Unarmoured Graphs}
+
+```
