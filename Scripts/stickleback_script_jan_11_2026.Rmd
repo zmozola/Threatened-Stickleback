@@ -108,11 +108,21 @@ numeric_traits_nosl <- c("body_depth.adj", "ap_length.adj", "ap_width.adj", "jaw
 
 countable_traits <- c("ap_pa", "pp_pa", "dorsal_1_pa", "dorsal_2_pa", "dorsal_3_pa", "pelvic_spine_pa")
 
+numeric_traits_unarmoured <-  c("ap_length.adj", "ap_width.adj",
+                    "ppl.adj", "ppw.adj", "dorsal_1.adj", "dorsal_2.adj", "dorsal_3.adj", 
+                    "pelvic_spine.adj", "plate_l_total", "plate_r_total")
+
+spines <- c("dorsal_1.adj", "dorsal_2.adj", "dorsal_3.adj", "pelvic_spine.adj")
+
 lakes <- list("Drizzle Lake" = drizzle, "Mayer Lake" = mayer, "Serendipity Lake" = serendipity, "Boulton Lake" = boulton, "Rouge Lake" = rouge)
 
 lakes2 <- list("drizzle" = drizzle, "mayer" = mayer, "serendipity" = serendipity, "boulton" = boulton, "rouge" = rouge)
 
 lakes3 <- c("Drizzle Lake", "Mayer Lake", "Serendipity Lake", "Boulton Lake", "Rouge Lake")
+
+unarmouredlakes <- list("Serendipity Lake" = serendipity, "Boulton Lake" = boulton, "Rouge Lake" = rouge)
+
+giantlakes <- list("Drizzle Lake" = drizzle, "Mayer Lake" = mayer)
 
 
 lakecolours <- c("Drizzle Lake" = "chartreuse4", "Mayer Lake" = "darkorange2", "Serendipity Lake" = "blue", "Boulton Lake" = "purple", "Rouge Lake" = "red")
@@ -417,11 +427,161 @@ rougesex <- sexy %>%
 sexylakes <- list("Drizzle Lake" = drizzlesex, "Mayer Lake" = mayersex, "Serendipity Lake" = serendipitysex, "Boulton Lake" = boultonsex, "Rouge Lake" = rougesex)
 #Note, I just realized I could do this the other way with filtering within the loop
 
+sexyunarmouredlakes <- list("Serendipity Lake" = serendipitysex, "Boulton Lake" = boultonsex, "Rouge Lake" = rougesex)
+
+sexygiantlakes <- list("Drizzle Lake" = drizzlesex, "Mayer Lake" = mayersex)
+
 ```
 
 
 ## Unarmoured Graphs
 
 ```{r Unarmoured Graphs}
+#Numeric Traits
+# Trait/Time Period/Sex
+for (j in names(sexyunarmouredlakes)) {
+  lake <- sexyunarmouredlakes[[j]]
+  lakecolour <- lakecolours[[j]]
+  for (i in numeric_traits_unarmoured) {
+    print(ggplot(lake, aes(x =  time_period, y = .data[[i]], color = sex)) +
+            geom_boxplot(fill = lakecolour) + 
+            theme_minimal() +  
+            labs(title = j))
+}}
+
+
+#FIND A WAY TO DO ALL TRAITS ON SAME GRAPH?
+# Trait/Time Period
+for (j in names(unarmouredlakes)) {
+  lake <- unarmouredlakes[[j]]
+  lakecolour <- lakecolours[[j]]
+  for (i in numeric_traits_unarmoured) {
+    print(ggplot(lake, aes(x =  time_period, y = .data[[i]])) +
+            geom_boxplot(fill = lakecolour) + 
+            theme_minimal() +  
+            labs(title = j))
+  }}
+
+#PRESENCE ABSENCE 
+#Pres/abs Historical/Present
+for (j in names(unarmouredlakes)) {
+  lake <- lakes[[j]]
+  for (i in countable_traits) {
+    print(ggplot(data = lake, aes(x =  time_period, fill = .data[[i]])) +
+            geom_bar(stat = "count", position = "fill") +
+            labs(title = paste(j,i), 
+       x = "Time Period", y = "Proportion of Fish") +
+         theme_minimal() +
+         scale_fill_manual(name = "Presence", values = presabscolours))
+  }}
+
+#Pres/abs sex
+for (j in names(sexyunarmouredlakes)) {
+  lake <- sexylakes[[j]]
+  for (i in countable_traits) {
+    print(ggplot(data = lake, aes(x =  sex, fill = .data[[i]])) +
+            geom_bar(stat = "count", position = "fill") +
+            labs(title = paste(j,i), 
+       x = "Time Period", y = "Proportion of Fish") +
+         theme_minimal() +
+         scale_fill_manual(name = "Presence", values = presabscolours))
+  }}
+
+#Pres/Abs/Time Period/Sex
+for (j in names(sexyunarmouredlakes)) {
+  lake <- sexylakes[[j]]
+  for (i in countable_traits) {
+    for (k in timeperiods) {
+    print(ggplot(data = filter(lake, time_period == k), aes(x =  sex, fill = .data[[i]])) +
+            geom_bar(stat = "count", position = "fill") +
+            labs(title = paste(j,i,k), 
+       x = "Sex", y = "Proportion of Fish") +
+         theme_minimal() +
+         scale_fill_manual(name = "Presence", values = presabscolours))
+  }}}
+
+```
+
+## Giant Graphs
+```{r Giant Graphs}
+
+
+#Regular SL
+print(ggplot(filter(dataclean, body_of_water %in% c("Drizzle Lake", "Mayer Lake")), 
+      aes(x =  body_of_water, y = sl, color = time_period)) +
+            geom_boxplot(fill = lakecolour) + 
+            theme_minimal() +  
+            labs(title = j))
+
+filtertest <- filter(dataclean, body_of_water %in% c("Drizzle Lake", "Mayer Lake"))
+
+#Regular SL/sex
+for (j in names(sexygiantlakes)) {
+  lake <- sexygiantlakes[[j]]
+  lakecolour <- lakecolours[[j]]
+  print(ggplot(lake, aes(x =  time_period, y = sl, color = sex)) +
+            geom_boxplot(fill = lakecolour) + 
+            theme_minimal() +  
+            labs(title = j))
+}
+
+
+#Filter to top ten of each year for regular SL
+for (j in names(giantlakes)) {
+  lake <- giantlakes[[j]]
+  lakecolour <- lakecolours[[j]]
+  print(ggplot(slice_max(lake, sl, n=10, by = (time_period)),aes(x =  time_period, y = sl)) +
+            geom_boxplot(fill = lakecolour) + 
+            theme_minimal() +  
+            labs(title = paste(j, "SL Top 10 Historical Present")))
+}
+
+#Filter to top ten of each year for SL/sex
+for (j in names(sexygiantlakes)) {
+  lake <- sexygiantlakes[[j]]
+  lakecolour <- lakecolours[[j]] #I could also group by year to get top 10 biggest by year
+  print(ggplot(slice_max(lake,sl, n=10, by = time_period), aes(x =  time_period, y = sl, color = sex)) +
+            geom_boxplot(fill = lakecolour) + 
+            theme_minimal() +  
+            labs(title = j))
+}
+
+
+#Spine lengths Filtered to top 10/time period
+for (j in names(giantlakes)) {
+  lake <- giantlakes[[j]]
+  lakecolour <- lakecolours[[j]]
+  for (i in spines) {
+  print(ggplot(slice_max(lake, sl, n=10, by = (time_period)),aes(x =  time_period, y = .data[[i]])) +
+            geom_boxplot(fill = lakecolour) + 
+            theme_minimal() +  
+            labs(title = paste(j, i, "Top 10 by SL")))
+  }}
+
+#Spine lengths Filtered to top 10/time period/sex
+for (j in names(sexygiantlakes)) {
+  lake <- sexygiantlakes[[j]]
+  lakecolour <- lakecolours[[j]]
+  for (i in spines) {
+  print(ggplot(slice_max(lake, sl, n=10, by = (time_period)),aes(x =  time_period, y = .data[[i]], 
+                                                                 color = sex)) +
+            geom_boxplot(fill = lakecolour) + 
+            theme_minimal() +  
+            labs(title = paste(j, i, "Top 10 by SL")))
+}}
+
+```
+
+
+## T Tests
+```{r t tests}
+#Something is wrong here working on it
+for (j in names(unarmouredlakes)){
+  lake <- unarmouredlakes[[j]]
+  for (i in numeric_traits_unarmoured) {
+    print(paste(j,i))
+    print(t.test(j[[i]] ~ time_period, data = lake))
+}}
+
 
 ```
