@@ -573,15 +573,43 @@ for (j in names(sexygiantlakes)) {
 ```
 
 
-## T Tests
-```{r t tests}
-#Something is wrong here working on it
+## Unarmoured T Tests
+```{r Unarmoured T Tests}
+#T tests for unarmoured lakes/time period/numerical traits
 for (j in names(unarmouredlakes)){
   lake <- unarmouredlakes[[j]]
   for (i in numeric_traits_unarmoured) {
     print(paste(j,i))
-    print(t.test(j[[i]] ~ time_period, data = lake))
+    print(t.test(lake[[i]] ~ time_period, data = lake))
 }}
+
+#Only the significant ones for unarmoured lakes/time period/numerical traits
+for (j in names(unarmouredlakes)){
+  lake <- unarmouredlakes[[j]]
+  for (i in numeric_traits_unarmoured) {
+    test <- t.test(lake[[i]] ~ time_period, data = lake)
+    if (test$p.value < 0.05) {
+      print(paste(j,i))
+      print(test)
+    }}}
+
+
+#T tests for unarmoured lakes/time period/numerical traits/sex
+
+#Only significant T tests for unarmoured lakes/time period/numerical traits/sex
+
+#presence absence?
+
+
+
+```
+
+##Giant T Tests
+```{r Giant T Tests}
+
+#Regular
+
+#Filtered to top 10
 
 
 ```
