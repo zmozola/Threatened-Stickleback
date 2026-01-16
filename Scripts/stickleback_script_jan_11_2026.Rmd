@@ -547,6 +547,18 @@ for (j in names(sexygiantlakes)) {
 }
 
 
+#Spine lengths /time period
+for (j in names(giantlakes)) {
+  lake <- giantlakes[[j]]
+  lakecolour <- lakecolours[[j]]
+  for (i in spines) {
+  print(ggplot(lake,aes(x =  time_period, y = .data[[i]])) +
+            geom_boxplot(fill = lakecolour) + 
+            theme_minimal() +  
+            labs(title = paste(j, i, "Top 10 by SL")))
+  }}
+
+
 #Spine lengths Filtered to top 10/time period
 for (j in names(giantlakes)) {
   lake <- giantlakes[[j]]
