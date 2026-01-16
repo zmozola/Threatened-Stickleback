@@ -20,7 +20,7 @@ dat <- read.csv("./Data/data.clean.csv")
 
 #Delete unecessary columns
 data.frame(ColNum = seq_along(dat), Name = names(dat))
-dat <- dat[, -c(1,2,3,7,8,9,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,
+dat <- dat[, -c(1,2,3,7,9,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,
                          31,32,33,34,35,36,37,38,39,40,41, 45,46,47,48,49,50,51,52,53,55,56,57,58,59,60,
                          61,62,63,64,65)]
 
@@ -67,6 +67,28 @@ dat <- dat %>%
     Location == "Serendipity" & year == 2015 ~ "Present 4",
     TRUE ~ NA_character_  # everything else gets NA
   ))
+```
+
+```{r}
+
+
+# Example trait list
+traits <- c("ap_length.adj", "ap_width.adj", "ppl.adj", "ppw.adj", 
+               "dorsal_1.adj", "dorsal_2.adj", "pelvic_spine.adj", "plate_lr_total")  # replace with your actual trait names
+
+# Loop through each trait and plot
+for (trait in traits) {
+  p <- ggplot(dat, aes_string(x = "measured_by", y = trait, color = "measured_by")) +
+    geom_point(position = position_jitter(width = 0.2), alpha = 0.7) +
+    facet_wrap(~body_of_water)
+    labs(title = paste("Trait:", trait),
+         y = trait,
+         x = "Measured By") +
+    theme_minimal()
+  
+  print(p)
+}
+
 ```
 
 

@@ -1,0 +1,69 @@
+---
+title: "Zoe_Map"
+output: html_document
+date: "2026-01-16"
+---
+
+```{r}
+pacman::p_load(sf, ggplot2, ggrepel, dplyr, magrittr, patchwork)
+
+
+shapefile_path_lake <- "../Map/FWLKSPL_polygon"
+test <- "../Map/FWSLNDSPL_polygon"
+sites <- read.csv("../Map/Sites_copy.csv")
+
+
+lakes <- st_read(shapefile_path_lake)
+land <- st_read(test)
+
+
+sites_sf <- st_as_sf(sites, coords = c("Long", "Lat"), crs = 4326)
+land <- st_transform(land, 4326)
+lakes <- st_transform(lakes, 4326)
+sites_sf <- st_transform(sites_sf, 4326)
+
+
+# Define bounding box for Haida Gwaii (W/E/N/S in decimal degrees)
+bbox_hg <- st_bbox(c(xmin = -132.3, xmax = -131.6, 
+                     ymin = 53.6, ymax = 54.2), crs = st_crs(land))
+
+# bbox_hg["xmax"] <- bbox_hg["xmax"] + 0.2   # further east
+# bbox_hg["ymax"] <- bbox_hg["ymax"] + 0.2   # further north
+
+
+# Crop layers
+land_hg  <- st_crop(land, bbox_hg)
+lakes_hg <- st_crop(lakes, bbox_hg)
+sites_hg <- st_crop(sites_sf, bbox_hg)
+
+# Plot cropped data
+p2<-ggplot() +
+  geom_sf(data = land_hg, fill = "#bdbdbd") +
+  geom_sf(data = lakes_hg, fill = "#67a9cf", color = NA) +
+  geom_sf(data = sites_hg,  size = 2) +
+geom_text_repel(
+    data = sites_hg,
+    aes(x = st_coordinates(sites_hg)[,1], y = st_coordinates(sites_hg)[,2], label = Site),
+    size = 3,
+  ) +
+
+  theme_void() +
+  theme(legend.position = "none")
+
+#Now just Haida Gwaii plot 
+# Define coordinates of your zoom box (xmin, ymin, xmax, ymax)
+zoom_bbox <- st_bbox(c(xmin = -132.3, xmax = -131.6, ymin = 53.6, ymax = 54.2), crs = st_crs(land))
+zoom_poly <- st_as_sfc(zoom_bbox)
+zoom_poly_coords <- st_coordinates(zoom_poly) %>% as.data.frame()
+
+p1<- ggplot() +
+  geom_sf(data = land, fill = "#bdbdbd") +
+  geom_sf(data = lakes, fill = "#67a9cf", color = NA) +
+  theme_void() +
+   geom_path(data = zoom_poly_coords, aes(X, Y), color = "black", size = 0.5) +
+  theme(legend.position = "none")
+
+map <- p1+p2
+ggsave("map.png", plot = map, width = 10, height = 5, dpi = 300)
+```
+
