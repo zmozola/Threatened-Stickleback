@@ -621,7 +621,16 @@ for (j in names(unarmouredlakes)){
 
 #Regular
 
-#Filtered to top 10
+#Only the significant ones for unarmoured lakes/time period/numerical traits
+for (j in names(giantlakes)){
+  lake <- giantlakes[[j]]
+  for (i in spines) {
+    test <- t.test(lake[[i]] ~ time_period, data = lake)
+    if (test$p.value < 0.05) {
+      print(paste(j,i))
+      print(test)
+    }}}
+
 
 
 ```
