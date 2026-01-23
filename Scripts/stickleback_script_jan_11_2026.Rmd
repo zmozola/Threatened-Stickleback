@@ -604,25 +604,20 @@ for (j in names(unarmouredlakes)){
 
 #T tests for unarmoured lakes/time period/numerical traits/SEX only sig
 #NOT working something wrong with my sex, has more than 2 levels
+
 for (j in names(sexyunarmouredlakes)){
-  lake <- sexyunarmouredlakes[[j]]
+  bothtimelake <- sexyunarmouredlakes[[j]]
   for (i in numeric_traits_unarmoured) {
     for (k in timeperiods) {
-      #lake <- lake$time_period == k
+      lake <- bothtimelake[bothtimelake$time_period == k, ]
       #test <- t.test(lake[[i]] ~ sex, data = lake)
       #if (test$p.value < 0.05) {
-        print(paste(j,i,k, nlevels(sex)))
+      print(paste(j,i,k))
+      if (nlevels(factor(lake$sex)!= 2)) {
+        print(paste(j,i,k, nlevels(factor(lake$sex))))
         #print(test)
-    }}}#}
+      }}}}
 
-#Sex NO time period only sig ALSO MESSED UP, somethign to do with ????
-for (j in names(sexyunarmouredlakes)){
-  lake <- sexyunarmouredlakes[[j]]
-  for (i in numeric_traits_unarmoured) {
-    test <- t.test(lake[[i]] ~ time_period, data = lake)
-      print(paste(j,i))
-      print(test)
-    }}
 
 
 
@@ -652,13 +647,13 @@ for (j in names(giantlakes)){
 
 #Only the significant ones for giant lakes/SEX/spines
 for (j in names(sexygiantlakes)){
-  lake <- sexygiantlakes[[j]]
+  bothtimelake <- sexygiantlakes[[j]]
   for (i in spines) {
     for (k in timeperiods) {
-      #lake <- lake %>% filter(time_period == k) HAVING TROUBLE W SUBSET
+      lake <- bothtimelake[bothtimelake$time_period == k, ]
       test <- t.test(lake[[i]] ~ sex, data = lake)
       if (test$p.value < 0.05) {
-        print(paste(j,i,k, nlevels(sex)))
+        print(paste(j,i,k, nlevels(factor(lake$sex))))
         print(test)
     }}}}
 
