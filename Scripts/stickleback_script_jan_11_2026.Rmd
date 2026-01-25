@@ -381,9 +381,15 @@ rouge$eye_diameter.adj<-rouge$eye_diameter*(mean(rouge$sl)/rouge$sl)^Coef["eye",
 ### Smash into dataclean
 ```{r Smash Dataclean}
 #Put the adjusted columns into dataclean
-
 dataclean <- bind_rows(list(drizzle, mayer, serendipity, boulton, rouge))
 
+
+#Make unarmoured and giant only
+unarmoured <- dataclean %>%
+  filter(body_of_water %in% c("Serendipity Lake", "Boulton Lake", "Rouge Lake"))
+
+giant <- dataclean %>%
+  filter(body_of_water %in% c("Drizzle Lake", "Mayer Lake"))
 
 
 
@@ -411,12 +417,30 @@ serendipitysex <- sexy %>%
 rougesex <- sexy %>%
   filter(body_of_water=="Rouge Lake")
 
+#Make Unarmoured
+unarmouredsex <- unarmoured %>%
+  filter(sex %in% c("M", "F"))
+
+#Make Giant
+giantsex <- giant %>%
+  filter(sex %in% c("M", "F"))
 
 ```
 
 
 ## Additional Formula Setup Again
 ```{r Additional Formula Setup}
+
+#Redo these (take out above??) since adjusted
+lakes <- list("Drizzle Lake" = drizzle, "Mayer Lake" = mayer, "Serendipity Lake" = serendipity, "Boulton Lake" = boulton, "Rouge Lake" = rouge)
+
+lakes2 <- list("drizzle" = drizzle, "mayer" = mayer, "serendipity" = serendipity, "boulton" = boulton, "rouge" = rouge)
+
+lakes3 <- c("Drizzle Lake", "Mayer Lake", "Serendipity Lake", "Boulton Lake", "Rouge Lake")
+
+unarmouredlakes <- list("Serendipity Lake" = serendipity, "Boulton Lake" = boulton, "Rouge Lake" = rouge)
+
+giantlakes <- list("Drizzle Lake" = drizzle, "Mayer Lake" = mayer)
 
 #Make lists for for loops
 
@@ -610,13 +634,13 @@ for (j in names(sexyunarmouredlakes)){
   for (i in numeric_traits_unarmoured) {
     for (k in timeperiods) {
       lake <- bothtimelake[bothtimelake$time_period == k, ]
-      #test <- t.test(lake[[i]] ~ sex, data = lake)
+      test <- t.test(lake[[i]] ~ sex, data = lake)
       #if (test$p.value < 0.05) {
       print(paste(j,i,k))
-      if (nlevels(factor(lake$sex)!= 2)) {
+      #if (nlevels(factor(lake$sex)!= 2)) {
         print(paste(j,i,k, nlevels(factor(lake$sex))))
-        #print(test)
-      }}}}
+        print(test)
+      }}}
 
 
 
@@ -661,7 +685,43 @@ for (j in names(sexygiantlakes)){
 ```
 
 
+## Linear Models
+```{r Linear Models}
 
+#Unarmoured
+#Model: trait ~ Sex * time  * population
+for (i in numeric_traits_unarmoured) {
+  model1 <- lm(unarmouredsex[[i]]~sex*time_period, data = unarmouredsex)
+  print(i)
+  print(summary(model1))
+}
+
+#If sex is significant
+for (i in numeric_traits_unarmoured) {
+  model1 <- lm(unarmouredsex[[i]]~sex*time_period, data = unarmouredsex)
+  if (summary(model1)$coefficients["sexM", "Pr(>|t|)"] < 0.05) {
+  print(i)
+  print(summary(model1))
+}}
+
+
+
+#Unarmoured
+#Model: trait ~ Sex * time  * population
+for (i in spines) {
+  model2 <- lm(giantsex[[i]]~sex*time_period, data = giantsex)
+  print(i)
+  print(summary(model2))
+}
+
+#If sex is significant
+for (i in spines) {
+  model2 <- lm(giantsex[[i]]~sex*time_period, data = giantsex)
+  if (summary(model2)$coefficients["sexM", "Pr(>|t|)"] < 0.05) {
+  print(i)
+  print(summary(model2))
+}}
+```
 
 ## Fancier graphs
 ```{r Fancier Graphs}
