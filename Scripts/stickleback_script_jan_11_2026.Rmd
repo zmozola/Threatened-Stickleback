@@ -699,7 +699,8 @@ for (i in numeric_traits_unarmoured) {
 #If sex is significant
 for (i in numeric_traits_unarmoured) {
   model1 <- lm(unarmouredsex[[i]]~sex*time_period, data = unarmouredsex)
-  if (summary(model1)$coefficients["sexM", "Pr(>|t|)"] < 0.05) {
+  if (summary(model1)$coefficients["sexM", "Pr(>|t|)"] < 0.05 |
+      summary(model2)$coefficients["sexM:time_periodPresent", "Pr(>|t|)"] < 0.05) {
   print(i)
   print(summary(model1))
 }}
@@ -717,10 +718,22 @@ for (i in spines) {
 #If sex is significant
 for (i in spines) {
   model2 <- lm(giantsex[[i]]~sex*time_period, data = giantsex)
-  if (summary(model2)$coefficients["sexM", "Pr(>|t|)"] < 0.05) {
+  if (summary(model2)$coefficients["sexM", "Pr(>|t|)"] < 0.05 |
+      summary(model2)$coefficients["sexM:time_periodPresent", "Pr(>|t|)"] < 0.05) {
   print(i)
   print(summary(model2))
-}}
+  }}
+
+
+
+
+#MANCOVA???
+```
+## Effect Sizes
+```{r Effect sizes}
+
+
+
 ```
 
 ## Fancier graphs
