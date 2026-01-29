@@ -25,6 +25,7 @@ library(janitor)
 library(ggplot2)
 library(ggsignif)
 library(ggpubr)
+library(ggrepel)
 
 
 ```
@@ -83,59 +84,6 @@ serendipity <- dataset %>%
 #Make Rouge
 rouge <- dataset %>%
   filter(body_of_water=="Rouge Lake")
-
-```
-
-
-
-
-##Formula Setup
-```{r Formula Setup, eval=FALSE, include=FALSE}
-
-#Make lists for for loops
-
-numeric_traits <- c("sl", "body_depth.adj", "ap_length.adj", "ap_width.adj", "jaw_length.adj", 
-                    "ppl.adj", "ppw.adj", "dorsal_1.adj", "dorsal_2.adj", "dorsal_3.adj", 
-                    "pelvic_spine.adj", "eye_diameter.adj", "plate_l_total", "plate_r_total")
-
-numeric_traits_noadj <- c("sl", "body_depth", "ap_length", "ap_width", "jaw_length", 
-                    "ppl", "ppw", "dorsal_1", "dorsal_2", "dorsal_3", "pelvic_spine", 
-                    "eye_diameter")
-
-numeric_traits_nosl <- c("body_depth.adj", "ap_length.adj", "ap_width.adj", "jaw_length.adj", 
-                    "ppl.adj", "ppw.adj", "dorsal_1.adj", "dorsal_2.adj", "dorsal_3.adj",
-                   "pelvic_spine.adj", "eye_diameter.adj", "plate_l_total", "plate_r_total")
-
-countable_traits <- c("ap_pa", "pp_pa", "dorsal_1_pa", "dorsal_2_pa", "dorsal_3_pa", "pelvic_spine_pa")
-
-numeric_traits_unarmoured <-  c("ap_length.adj", "ap_width.adj",
-                    "ppl.adj", "ppw.adj", "dorsal_1.adj", "dorsal_2.adj", "dorsal_3.adj", 
-                    "pelvic_spine.adj", "plate_l_total", "plate_r_total")
-
-spines <- c("dorsal_1.adj", "dorsal_2.adj", "dorsal_3.adj", "pelvic_spine.adj")
-
-lakes <- list("Drizzle Lake" = drizzle, "Mayer Lake" = mayer, "Serendipity Lake" = serendipity, "Boulton Lake" = boulton, "Rouge Lake" = rouge)
-
-lakes2 <- list("drizzle" = drizzle, "mayer" = mayer, "serendipity" = serendipity, "boulton" = boulton, "rouge" = rouge)
-
-lakes3 <- c("Drizzle Lake", "Mayer Lake", "Serendipity Lake", "Boulton Lake", "Rouge Lake")
-
-unarmouredlakes <- list("Serendipity Lake" = serendipity, "Boulton Lake" = boulton, "Rouge Lake" = rouge)
-
-giantlakes <- list("Drizzle Lake" = drizzle, "Mayer Lake" = mayer)
-
-
-lakecolours <- c("Drizzle Lake" = "chartreuse4", "Mayer Lake" = "darkorange2", "Serendipity Lake" = "blue", "Boulton Lake" = "purple", "Rouge Lake" = "red")
-
-platetotals <- c("Left" = "plate_l_total", "Right" = "plate_r_total", "Both Combined" = "plate_lr_total")
-
-platearrangements <- c("Left" = "plate_l_combined", "Right" = "plate_r_combined")
-
-timeperiods <- c("Historical", "Present")
-
-sex <- c("M", "F")
-
-presabscolours <- list("N" = "indianred", "Y" = "olivedrab4")
 
 ```
 
@@ -378,7 +326,7 @@ rouge$eye_diameter.adj<-rouge$eye_diameter*(mean(rouge$sl)/rouge$sl)^Coef["eye",
 ```
 
 
-### Additional Reordering
+## Additional Reordering
 ```{r Additional Reordering}
 #Put the adjusted columns into dataclean
 dataclean <- bind_rows(list(drizzle, mayer, serendipity, boulton, rouge))
@@ -395,7 +343,8 @@ giant <- dataclean %>%
 
 #Make the data sexy
 sexy <- dataclean %>%
-  filter(sex %in% c("M", "F"))
+  filter(sex %in% c("M", "F")) %>%
+  mutate(sex = as.factor(sex))
 
 #Make Boulton
 boultonsex <- sexy %>%
@@ -430,11 +379,44 @@ giantsex <- giant %>%
 
 #Z transformed version of the data
 zdataclean <- dataclean %>%
-  mutate()
+  mutate(across(where(is.numeric),
+                ~ as.numeric(scale(.x))))
+
+#Make unarmoured and giant only z transformed
+zunarmoured <- zdataclean %>%
+  filter(body_of_water %in% c("Serendipity Lake", "Boulton Lake", "Rouge Lake"))
+
+zgiant <- zdataclean %>%
+  filter(body_of_water %in% c("Drizzle Lake", "Mayer Lake"))
+
+#Sexy z transformed version of the data
+zsexy <- sexy %>%
+  mutate(across(where(is.numeric),
+                ~ as.numeric(scale(.x))))
+
+#Make Boulton Z
+zboultonsex <- zsexy %>%
+  filter(body_of_water=="Boulton Lake")
+
+#Make Drizzle Z
+zdrizzlesex <- zsexy %>%
+  filter(body_of_water=="Drizzle Lake")
+
+#Make Mayer Z
+zmayersex <- zsexy %>%
+  filter(body_of_water=="Mayer Lake")
+
+#Make Serendipity Z
+zserendipitysex <- zsexy %>%
+  filter(body_of_water=="Serendipity Lake")
+
+#Make Rouge Z
+zrougesex <- zsexy %>%
+  filter(body_of_water=="Rouge Lake")
 
 ```
 
-
+##Formula Setup
 ```{r Formula Setup}
 
 #Make lists for for loops
@@ -456,6 +438,8 @@ countable_traits <- c("ap_pa", "pp_pa", "dorsal_1_pa", "dorsal_2_pa", "dorsal_3_
 numeric_traits_unarmoured <-  c("ap_length.adj", "ap_width.adj",
                     "ppl.adj", "ppw.adj", "dorsal_1.adj", "dorsal_2.adj", "dorsal_3.adj", 
                     "pelvic_spine.adj", "plate_l_total", "plate_r_total")
+
+giant_traits <- c("sl", "dorsal_1.adj", "dorsal_2.adj", "dorsal_3.adj", "pelvic_spine.adj")
 
 spines <- c("dorsal_1.adj", "dorsal_2.adj", "dorsal_3.adj", "pelvic_spine.adj")
 
@@ -490,7 +474,7 @@ presabscolours <- list("N" = "indianred", "Y" = "olivedrab4")
 
 ```
 
-
+# Graphing
 ## Unarmoured Graphs
 ```{r Unarmoured Graphs}
 #Numeric Traits
@@ -641,6 +625,93 @@ for (j in names(sexygiantlakes)) {
 ```
 
 
+##1:1 Plots
+### 1:1 Plot Prep
+``` {r 1:1 Plot Prep}
+
+#Make unarmoured means
+zunarmoured_means <- zunarmoured %>%
+  select(body_of_water, time_period, numeric_traits_unarmoured) %>%
+  pivot_longer(
+    cols = all_of(numeric_traits_unarmoured),
+    names_to = "trait",
+    values_to = "z_value") %>%
+  group_by(body_of_water, trait, time_period) %>%
+  summarise(mean_z = mean(z_value, na.rm = TRUE), .groups = "drop") %>%
+  pivot_wider(
+    names_from = time_period,
+    values_from = mean_z)
+
+
+#Make giant means (INCLUDE SL LATER? scary with the top 10 thing)
+zgiant_means <- zgiant %>%
+  select(body_of_water, time_period, spines) %>%
+  pivot_longer(
+    cols = all_of(spines),
+    names_to = "trait",
+    values_to = "z_value") %>%
+  group_by(body_of_water, trait, time_period) %>%
+  summarise(mean_z = mean(z_value, na.rm = TRUE), .groups = "drop") %>%
+  pivot_wider(
+    names_from = time_period,
+    values_from = mean_z)
+
+#Make giant means WITH SL not with adjusted SL to top 10
+zgiant_means_sl <- zgiant %>%
+  select(body_of_water, time_period, giant_traits) %>%
+  pivot_longer(
+    cols = all_of(giant_traits),
+    names_to = "trait",
+    values_to = "z_value") %>%
+  group_by(body_of_water, trait, time_period) %>%
+  summarise(mean_z = mean(z_value, na.rm = TRUE), .groups = "drop") %>%
+  pivot_wider(
+    names_from = time_period,
+    values_from = mean_z)
+
+```
+
+
+###1:1 Plotting
+``` {r 1:1 Plotting}
+#Plot Unarmoured 1:1
+ggplot(zunarmoured_means, aes(x=Historical, y = Present, 
+                              color = body_of_water, shape = trait)) +
+  geom_point() +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed") +
+  labs(x = "Historical Trait Mean (Z Transformed)", 
+       y = "Present Trait Mean (Z Transformed)",
+       title = "1:1 Comparison of Historical and Present Armour 
+       Traits in Unarmoured Stickleback") +
+  scale_color_manual(name = "Lake", values = lakecolours) +
+  scale_shape_manual(name = "Trait", values = c(0:9))
+
+#Plot Giant 1:1 NO SL
+ggplot(zgiant_means, aes(x=Historical, y = Present, 
+                         color = body_of_water, shape = trait)) +
+  geom_point() +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed") +
+  labs(x = "Historical Trait Mean (Z Transformed)", 
+       y = "Present Trait Mean (Z Transformed)",
+       title = "1:1 Comparison of Historical and Present Size-Related 
+       Traits in Giant Stickleback") +
+  scale_color_manual(name = "Lake", values = lakecolours)
+
+#Plot Giant 1:1 with UNADJUSTED SL
+ggplot(zgiant_means_sl, aes(x=Historical, y = Present, 
+                         color = body_of_water, shape = trait)) +
+  geom_point() +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed") +
+  labs(x = "Historical Trait Mean (Z Transformed)", 
+       y = "Present Trait Mean (Z Transformed)",
+       title = "1:1 Comparison of Historical and Present Size-Related 
+       Traits in Giant Stickleback") +
+  scale_color_manual(name = "Lake", values = lakecolours)
+
+```
+
+
+
 ## Unarmoured T Tests
 ```{r Unarmoured T Tests}
 #T tests for unarmoured lakes/time period/numerical traits
@@ -663,7 +734,8 @@ for (j in names(unarmouredlakes)){
 
 
 #T tests for unarmoured lakes/time period/numerical traits/SEX only sig
-#NOT working something wrong with my sex, has more than 2 levels
+#NOT working something wrong with my sex, has more than 2 levels but i KNOW
+#I KNOW IT ONLY HAS 2 LEVELS AAAAAAAAAAAAA
 
 for (j in names(sexyunarmouredlakes)){
   bothtimelake <- sexyunarmouredlakes[[j]]
@@ -720,7 +792,7 @@ for (j in names(sexygiantlakes)){
 
 ```
 
-
+# Modelling
 ## Linear Models
 ```{r Linear Models}
 
@@ -766,19 +838,14 @@ for (i in spines) {
 #MANCOVA???
 ```
 
-
-## 1:1 Plots
-``` {r 1:1 Plots}
-
-
-
-```
+# Not Yet Completed
 ## Effect Sizes
 ```{r Effect sizes}
 
 
 
 ```
+
 
 ## Fancier graphs
 ```{r Fancier Graphs}
