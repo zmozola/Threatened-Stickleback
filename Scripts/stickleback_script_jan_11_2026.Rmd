@@ -90,7 +90,7 @@ rouge <- dataset %>%
 
 
 ##Formula Setup
-```{r Formula Setup}
+```{r Formula Setup, eval=FALSE, include=FALSE}
 
 #Make lists for for loops
 
@@ -378,8 +378,8 @@ rouge$eye_diameter.adj<-rouge$eye_diameter*(mean(rouge$sl)/rouge$sl)^Coef["eye",
 ```
 
 
-### Smash into dataclean
-```{r Smash Dataclean}
+### Additional Reordering
+```{r Additional Reordering}
 #Put the adjusted columns into dataclean
 dataclean <- bind_rows(list(drizzle, mayer, serendipity, boulton, rouge))
 
@@ -417,6 +417,7 @@ serendipitysex <- sexy %>%
 rougesex <- sexy %>%
   filter(body_of_water=="Rouge Lake")
 
+
 #Make Unarmoured
 unarmouredsex <- unarmoured %>%
   filter(sex %in% c("M", "F"))
@@ -425,8 +426,62 @@ unarmouredsex <- unarmoured %>%
 giantsex <- giant %>%
   filter(sex %in% c("M", "F"))
 
+
+
+#Z transformed version of the data
+
+
 ```
 
+
+```{r Formula Setup}
+
+#Make lists for for loops
+
+numeric_traits <- c("sl", "body_depth.adj", "ap_length.adj", "ap_width.adj", "jaw_length.adj", 
+                    "ppl.adj", "ppw.adj", "dorsal_1.adj", "dorsal_2.adj", "dorsal_3.adj", 
+                    "pelvic_spine.adj", "eye_diameter.adj", "plate_l_total", "plate_r_total")
+
+numeric_traits_noadj <- c("sl", "body_depth", "ap_length", "ap_width", "jaw_length", 
+                    "ppl", "ppw", "dorsal_1", "dorsal_2", "dorsal_3", "pelvic_spine", 
+                    "eye_diameter")
+
+numeric_traits_nosl <- c("body_depth.adj", "ap_length.adj", "ap_width.adj", "jaw_length.adj", 
+                    "ppl.adj", "ppw.adj", "dorsal_1.adj", "dorsal_2.adj", "dorsal_3.adj",
+                   "pelvic_spine.adj", "eye_diameter.adj", "plate_l_total", "plate_r_total")
+
+countable_traits <- c("ap_pa", "pp_pa", "dorsal_1_pa", "dorsal_2_pa", "dorsal_3_pa", "pelvic_spine_pa")
+
+numeric_traits_unarmoured <-  c("ap_length.adj", "ap_width.adj",
+                    "ppl.adj", "ppw.adj", "dorsal_1.adj", "dorsal_2.adj", "dorsal_3.adj", 
+                    "pelvic_spine.adj", "plate_l_total", "plate_r_total")
+
+spines <- c("dorsal_1.adj", "dorsal_2.adj", "dorsal_3.adj", "pelvic_spine.adj")
+
+lakes <- list("Drizzle Lake" = drizzle, "Mayer Lake" = mayer, "Serendipity Lake" = serendipity, "Boulton Lake" = boulton, "Rouge Lake" = rouge)
+
+lakes2 <- list("drizzle" = drizzle, "mayer" = mayer, "serendipity" = serendipity, "boulton" = boulton, "rouge" = rouge)
+
+lakes3 <- c("Drizzle Lake", "Mayer Lake", "Serendipity Lake", "Boulton Lake", "Rouge Lake")
+
+unarmouredlakes <- list("Serendipity Lake" = serendipity, "Boulton Lake" = boulton, "Rouge Lake" = rouge)
+
+giantlakes <- list("Drizzle Lake" = drizzle, "Mayer Lake" = mayer)
+
+
+lakecolours <- c("Drizzle Lake" = "chartreuse4", "Mayer Lake" = "darkorange2", "Serendipity Lake" = "blue", "Boulton Lake" = "purple", "Rouge Lake" = "red")
+
+platetotals <- c("Left" = "plate_l_total", "Right" = "plate_r_total", "Both Combined" = "plate_lr_total")
+
+platearrangements <- c("Left" = "plate_l_combined", "Right" = "plate_r_combined")
+
+timeperiods <- c("Historical", "Present")
+
+sex <- c("M", "F")
+
+presabscolours <- list("N" = "indianred", "Y" = "olivedrab4")
+
+```
 
 ## Additional Formula Setup Again
 ```{r Additional Formula Setup}
@@ -696,38 +751,48 @@ for (i in numeric_traits_unarmoured) {
   print(summary(model1))
 }
 
-#If sex is significant
+#If sex is significant NOT WORKING!!!!!!!!
 for (i in numeric_traits_unarmoured) {
-  model1 <- lm(unarmouredsex[[i]]~sex*time_period, data = unarmouredsex)
-  if (summary(model1)$coefficients["sexM", "Pr(>|t|)"] < 0.05 |
-      summary(model2)$coefficients["sexM:time_periodPresent", "Pr(>|t|)"] < 0.05) {
-  print(i)
-  print(summary(model1))
-}}
-
-
-
-#Unarmoured
-#Model: trait ~ Sex * time  * population
-for (i in spines) {
-  model2 <- lm(giantsex[[i]]~sex*time_period, data = giantsex)
-  print(i)
-  print(summary(model2))
-}
-
-#If sex is significant
-for (i in spines) {
-  model2 <- lm(giantsex[[i]]~sex*time_period, data = giantsex)
+  model2 <- lm(unarmouredsex[[i]]~sex*time_period, data = unarmouredsex)
   if (summary(model2)$coefficients["sexM", "Pr(>|t|)"] < 0.05 |
       summary(model2)$coefficients["sexM:time_periodPresent", "Pr(>|t|)"] < 0.05) {
   print(i)
   print(summary(model2))
+}}
+
+
+
+#Giant
+#Model: trait ~ Sex * time  * population
+for (i in spines) {
+  model3 <- lm(giantsex[[i]]~sex*time_period, data = giantsex)
+  print(i)
+  print(summary(model3))
+}
+
+#If sex is significant
+for (i in spines) {
+  model4 <- lm(giantsex[[i]]~sex*time_period, data = giantsex)
+  if (summary(model4)$coefficients["sexM", "Pr(>|t|)"] < 0.05 |
+      summary(model4)$coefficients["sexM:time_periodPresent", "Pr(>|t|)"] < 0.05) {
+  print(i)
+  print(summary(model4))
   }}
 
 
 
 
 #MANCOVA???
+```
+
+
+## 1:1 Plots
+``` {r 1:1 Plots}
+
+# z transform data
+z
+
+
 ```
 ## Effect Sizes
 ```{r Effect sizes}
