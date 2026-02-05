@@ -642,6 +642,23 @@ zunarmoured_means <- zunarmoured %>%
     names_from = time_period,
     values_from = mean_z)
 
+#Make Unarmoured means WITH ERROR
+zunarmoured_means_error <- zunarmoured %>%
+  select(body_of_water, time_period, numeric_traits_unarmoured) %>%
+  pivot_longer(cols = all_of(numeric_traits_unarmoured),
+    names_to = "trait",
+    values_to = "z_value") %>%
+  group_by(body_of_water, trait, time_period) %>%
+  summarise(
+    n = sum(!is.na(z_value)),
+    mean_z = mean(z_value, na.rm = TRUE),
+    se_z = sd(z_value, na.rm = TRUE) / sqrt(n),
+    ci_z = qt(0.975, df = n - 1) * se_z,
+    .groups = "drop") %>%
+  pivot_wider(id_cols = c(body_of_water, trait),
+  names_from  = time_period,
+  values_from = c(mean_z, se_z, ci_z))
+
 
 #Make giant means (INCLUDE SL LATER? scary with the top 10 thing)
 zgiant_means <- zgiant %>%
@@ -656,17 +673,22 @@ zgiant_means <- zgiant %>%
     names_from = time_period,
     values_from = mean_z)
 
-zgiant_means <- zgiant %>%
+#Make giant means with error
+zgiant_means_error <- zgiant %>%
   select(body_of_water, time_period, all_of(spines)) %>%
-  pivot_longer(
-    cols = all_of(spines),
+  pivot_longer(cols = all_of(spines),
     names_to = "trait",
     values_to = "z_value") %>%
   group_by(body_of_water, trait, time_period) %>%
-  summarise(mean_z = mean(z_value, na.rm = TRUE), .groups = "drop") %>%
-  pivot_wider(
-    names_from = time_period,
-    values_from = mean_z)
+  summarise(
+    n = sum(!is.na(z_value)),
+    mean_z = mean(z_value, na.rm = TRUE),
+    se_z = sd(z_value, na.rm = TRUE) / sqrt(n),
+    ci_z = qt(0.975, df = n - 1) * se_z,
+    .groups = "drop") %>%
+  pivot_wider(id_cols = c(body_of_water, trait),
+  names_from  = time_period,
+  values_from = c(mean_z, se_z, ci_z))
 
 
 #Make giant means WITH SL not with adjusted SL to top 10
@@ -699,6 +721,22 @@ ggplot(zunarmoured_means, aes(x=Historical, y = Present,
   scale_color_manual(name = "Lake", values = lakecolours) +
   scale_shape_manual(name = "Trait", values = c(0:9))
 
+#Plot Unarmoured 1:1 with NO SL yes ERROR
+ggplot(zunarmoured_means_error, aes(x = mean_z_Historical, y = mean_z_Present,
+           color = body_of_water,shape = trait)) +
+  geom_point(size = 2) +
+  geom_errorbar(aes(ymin = mean_z_Present - ci_z_Present,
+      ymax = mean_z_Present + ci_z_Present),width = 0) +
+  geom_errorbarh(aes(xmin = mean_z_Historical - ci_z_Historical,
+      xmax = mean_z_Historical + ci_z_Historical),height = 0) +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed") +
+  coord_equal() +
+  scale_color_manual(name = "Lake", values = lakecolours) +
+  labs(x = "Historical Trait Mean (Z Transformed)",y = "Present Trait Mean (Z Transformed)",
+    title = "1:1 Comparison of Historical and Present Size-Related Traits 
+    in Unarmoured Stickleback") +
+  scale_shape_manual(name = "Trait", values = c(0:2,4:10))
+
 #Plot Giant 1:1 NO SL
 ggplot(zgiant_means, aes(x=Historical, y = Present, 
                          color = body_of_water, shape = trait)) +
@@ -709,20 +747,25 @@ ggplot(zgiant_means, aes(x=Historical, y = Present,
        title = "1:1 Comparison of Historical and Present Size-Related 
        Traits in Giant Stickleback") +
   scale_color_manual(name = "Lake", values = lakecolours) +
-  ylim(0,1.9) +
-  xlim(0,1.9)
+  ylim(0.7,1.9) +
+  xlim(0.7,1.9)
 
-#Plot Giant 1:1 with UNADJUSTED SL
-ggplot(zgiant_means_sl, aes(x=Historical, y = Present, 
-                         color = body_of_water, shape = trait)) +
-  geom_point() +
+#Plot Giant 1:1 with NO SL yes ERROR
+ggplot(zgiant_means_error, aes(x = mean_z_Historical, y = mean_z_Present,
+           color = body_of_water,shape = trait)) +
+  geom_point(size = 2) +
+  geom_errorbar(aes(ymin = mean_z_Present - ci_z_Present,
+      ymax = mean_z_Present + ci_z_Present),width = 0) +
+  geom_errorbarh(aes(xmin = mean_z_Historical - ci_z_Historical,
+      xmax = mean_z_Historical + ci_z_Historical),height = 0) +
   geom_abline(slope = 1, intercept = 0, linetype = "dashed") +
-  labs(x = "Historical Trait Mean (Z Transformed)", 
-       y = "Present Trait Mean (Z Transformed)",
-       title = "1:1 Comparison of Historical and Present Size-Related 
-       Traits in Giant Stickleback") +
-  scale_color_manual(name = "Lake", values = lakecolours)
-
+  coord_equal() +
+  scale_color_manual(name = "Lake", values = lakecolours) +
+  labs(x = "Historical Trait Mean (Z Transformed)",y = "Present Trait Mean (Z Transformed)",
+    title = "1:1 Comparison of Historical and Present Size-Related Traits in Giant Stickleback") +
+  xlim(0.7, 1.9) +
+  ylim(0.7, 1.9) +
+  scale_shape_manual(name = "Trait", values = c(0,1,2,4))
 ```
 
 
